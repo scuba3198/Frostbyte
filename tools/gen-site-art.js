@@ -19,6 +19,7 @@ const fan = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" str
 const bolt = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M27 5L12 27h11l-2 16 15-22H25z"/></g>`;
 const toggle = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="5" y="14" width="38" height="20" rx="10"/><circle cx="33" cy="24" r="5" fill="${s}"/></g>`;
 const tray = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="5" y="9" width="38" height="26" rx="4"/><path d="M5 40h38"/><path d="M33 40v-5"/><path d="M12 28h8"/></g>`;
+const gauge = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M6 34a18 18 0 1136 0"/><path d="M24 34l8-11"/><circle cx="24" cy="34" r="2.5" fill="${s}"/><path d="M10 24l3 1.5M24 12v3.5M38 24l-3 1.5"/></g>`;
 const terminal = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="5" y="8" width="38" height="32" rx="5"/><path d="M13 19l7 5-7 5M24 31h10"/></g>`;
 const shield = (s) => `<g stroke="${s}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M24 5l15 6v11c0 10-6.5 17-15 21-8.5-4-15-11-15-21V11z"/><path d="M17 24l5 5 9-10"/></g>`;
 
@@ -32,7 +33,7 @@ for (const [name, fn] of Object.entries(cardIcons)) {
 w('happen.svg', `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>${grad('g', ORANGE)}</defs><g stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><circle cx="12" cy="18" r="3.2"/></g></svg>`);
 w('measure.svg', `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>${grad('g', BLUE)}</defs><g stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></g></svg>`);
 
-// features column: three icon tiles joined by lines (64 x 476)
+// features column: four icon tiles joined by lines (64 x 682)
 const tile = (y, id, c, glyph) =>
   `<rect x="0.75" y="${y + 0.75}" width="62.5" height="62.5" rx="16.25" fill="#1A1A21"/>` +
   `<rect x="0.75" y="${y + 0.75}" width="62.5" height="62.5" rx="16.25" stroke="url(#${id})" stroke-width="1.5"/>` +
@@ -40,9 +41,9 @@ const tile = (y, id, c, glyph) =>
 const featuresCol = (c) => {
   const lg = (id) => grad(id, c, 0, 0, 1, 1) + grad(id + 'i', c);
   const line = (y1, y2) => `<path d="M32 ${y1}V${y2}" stroke="#2E2E3A" stroke-width="2" stroke-dasharray="4 6" stroke-linecap="round"/>`;
-  return `<svg width="64" height="476" viewBox="0 0 64 476" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>${lg('a')}${lg('b')}${lg('c')}</defs>` +
-    line(76, 194) + line(282, 400) +
-    tile(0, 'a', c, thermo) + tile(206, 'b', c, fan) + tile(412, 'c', c, bolt) + `</svg>`;
+  return `<svg width="64" height="682" viewBox="0 0 64 682" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>${lg('a')}${lg('b')}${lg('c')}${lg('d')}</defs>` +
+    line(76, 194) + line(282, 400) + line(488, 606) +
+    tile(0, 'a', c, thermo) + tile(206, 'b', c, fan) + tile(412, 'c', c, gauge) + tile(618, 'd', c, bolt) + `</svg>`;
 };
 w('features.svg', featuresCol(BLUE));
 w('features-off.svg', featuresCol(ORANGE));
