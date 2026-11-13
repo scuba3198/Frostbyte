@@ -18,7 +18,7 @@ It's free and open source (MIT license).
 Go to the **[Releases page](https://github.com/scuba3198/Frostbyte/releases/latest)** and download **`Frostbyte-Setup-x.y.z.exe`**.
 
 ### 2. Install
-Double-click the file you downloaded and follow the steps (Next → Next → Install).
+Double-click the file you downloaded and follow the steps (Next → Next → Install). On the options page you can choose whether to create a **Start Menu shortcut**, a **desktop shortcut**, and whether Frostbyte should **launch automatically when you sign in to Windows**. (You can change the last one later in Settings.)
 
 > **Windows says "Windows protected your PC"?**
 > That's normal for a new, small app that isn't digitally signed (code-signing certificates cost money). Click **More info**, then **Run anyway**. You can read all of the source code in this repository if you'd like to check what it does.

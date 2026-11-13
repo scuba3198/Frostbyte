@@ -1,7 +1,7 @@
 ; Frostbyte installer - build with Inno Setup 6:  ISCC.exe installer.iss
 ; (build.ps1 must have been run first so Frostbyte.exe and CoolMode.exe exist)
 #define AppName "Frostbyte"
-#define AppVersion "1.1.1"
+#define AppVersion "1.2.0"
 #define AppPublisher "scuba3198"
 #define AppURL "https://github.com/scuba3198/Frostbyte"
 
@@ -33,7 +33,9 @@ DisableProgramGroupPage=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "startmenuicon"; Description: "Create a &Start Menu shortcut"; GroupDescription: "Shortcuts:"
+Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"
+Name: "startup"; Description: "&Launch Frostbyte automatically when I sign in to Windows"; GroupDescription: "Options:"; Flags: unchecked
 
 [Files]
 Source: "Frostbyte.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -42,10 +44,12 @@ Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Frostbyte.exe"
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Frostbyte.exe"; Tasks: startmenuicon
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Frostbyte.exe"; Tasks: desktopicon
 
 [Run]
+; "Launch when I sign in" registers the same Task Scheduler entry as the in-app setting.
+Filename: "{app}\Frostbyte.exe"; Parameters: "--startup on"; Flags: runhidden runascurrentuser; Tasks: startup
 ; runascurrentuser: Frostbyte requires administrator rights, and by default Inno launches "Run" entries
 ; as the original (non-elevated) user, which fails with CreateProcess error 740.
 Filename: "{app}\Frostbyte.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent runascurrentuser
