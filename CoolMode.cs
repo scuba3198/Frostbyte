@@ -1,8 +1,7 @@
-// CoolMode - re-implementation of Outbyte Camomile 2.6.0.54948 "Cool Mode".
+// CoolMode - switches a Windows power plan that keeps the CPU out of turbo boost.
 //
-// Behaviour taken from Ghidra decompilation of Camomile.exe (CreateApplicationScheme
-// FUN_004a9a9c, parameter writer FUN_004aa468, enable FUN_004a98a8, disable FUN_004a9fe0 /
-// FUN_004ab548):
+// Only documented Windows power settings are used (powrprof.dll); the result can be checked on any PC
+// with `powercfg /qh <scheme> SUB_PROCESSOR`. Independent code, not affiliated with any other product.
 //   enable : remember the active scheme, duplicate SCHEME_BALANCED (falls back to the active
 //            scheme if Balanced is missing) into a fixed-GUID scheme, set its name/description,
 //            write exactly five processor values, make it the active scheme.
@@ -11,7 +10,7 @@
 //   be337238-0d82-4146-a960-4f3749d470c7  boost mode      = 0   (AC, DC)
 //   893dee8e-2bef-41e0-89c6-b55d0929964c  min proc state  = 5   (AC only)
 //   bc5038f7-23e0-4960-96da-33abaf5935ec  max proc state  = 99  (AC, DC)  -> no turbo
-// Camomile uses scheme GUID 4e2a2b94-...; this tool uses its own fixed GUID so both can coexist.
+// This tool uses its own fixed scheme GUID so it can coexist with other power plans.
 // Usage: CoolMode.exe on | off | toggle | status      (needs administrator)
 using System;
 using System.IO;
@@ -68,7 +67,7 @@ static class CoolMode
         Check(PowerWriteFriendlyName(IntPtr.Zero, ref mine, IntPtr.Zero, IntPtr.Zero, Name, Len(Name)), "WriteFriendlyName");
         Check(PowerWriteDescription(IntPtr.Zero, ref mine, IntPtr.Zero, IntPtr.Zero, Desc, Len(Desc)), "WriteDescription");
 
-        // The five writes, same order as Camomile's FUN_004aa468.
+        // The processor values written to the new scheme.
         Guid sub = SubProcessor, boost = BoostMode, min = ThrottleMin, max = ThrottleMax;
         uint sum = 0;
         sum += PowerWriteACValueIndex(IntPtr.Zero, ref mine, ref sub, ref boost, 0);

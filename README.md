@@ -198,7 +198,7 @@ Modern CPUs run at their normal "base" speed and then briefly **boost** well abo
 <details>
 <summary><h3>Where this came from</h3></summary>
 
-The behavior was worked out by observing a comparable commercial tool's actual effect on Windows power settings (using static and runtime analysis, for interoperability) and then **re-implementing it from scratch**. The five settings above are the ones that tool writes. No code, images or other assets from it are included in this project.
+Cooling Mode only uses documented Windows power settings, so you can verify exactly what it does on your own PC with `powercfg /qh` while the "Frostbyte" plan is active. Other tools offer a similar cooling mode (for example Outbyte's Camomile, which sells it in its PRO version); Frostbyte is independent, written from scratch, and not affiliated with or endorsed by them. No code, images or other assets from any other product are included in this project. Product names belong to their owners.
 
 </details>
 
