@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frostbyte - One-Click Cooling Mode for Windows PCs</title>
+<meta name="description" content="Frostbyte is a free, open-source Windows app with a single Cooling Mode switch. Run your PC cooler and quieter by limiting CPU boost.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%233F7CEF'/%3E%3Cpath d='M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7' stroke='%23fff' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@100..900&display=swap" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="extra.css" rel="stylesheet">
+</head>
+<body>
+<section class="container"><article class="main">
+
+<div class="section-wrapper sw-header"><div class="section s-header">
+  <a class="h-logo" href="#">
+    <svg viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="#3F7CEF"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg><span>Frostbyte</span></a>
+  <div class="h-menu">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#why-use-frostbyte">Why Use Frostbyte</a>
+    <a href="#performance">CPU and PC Performance</a>
+  </div>
+  <a href="https://github.com/scuba3198/Frostbyte" target="_blank" rel="noopener" class="download-btn m-btn gh" style="padding:8px 14px;min-width:unset;font-size:14px">View on GitHub</a>
+</div></div>
+
+<div class="section-wrapper sw1"><div class="section s1"><div class="s1-content">
+  <h1>Frostbyte: <span>One-Click&nbsp;Cooling</span> for Windows</h1>
+  <p class="p1">Run your PC cooler and quieter</p>
+  <p class="p2">A small Windows app with a single Cooling Mode switch. It stops your CPU from pushing to maximum boost speed, which reduces heat, fan noise and often power use.</p>
+  <div class="s1-btns">
+    <a href="https://github.com/scuba3198/Frostbyte/releases/latest" class="download-btn">Download</a>
+    <a href="https://github.com/scuba3198/Frostbyte" target="_blank" rel="noopener" class="download-btn gh alt">Source on GitHub</a>
+  </div>
+  <div class="s1-footer"><span>Compatible with: Windows 11, 10</span><span>Size: 2.1MB</span><span>Current version: 1.3.0</span></div>
+</div></div></div>
+
+<div id="features" class="section-wrapper sw2"><div class="section s2">
+  <h2>Frostbyte Features</h2>
+  <div id="app-switcher-container" class="s2-content">
+    <div>
+      <div class="s2-shot">
+        <img class="on" src="assets/window-on.png" alt="Frostbyte window with Cooling Mode on">
+        <img class="off" src="assets/window-off.png" alt="Frostbyte window with Cooling Mode off">
+        <div class="s2-app-switcher"><div id="app-switcher" class="s2-app-switcher-b" title="Try the switch"></div></div>
+      </div>
+    </div>
+    <div class="s2-features">
+      <div class="s2-features-h">Lower PC Temperature</div>
+      <div class="s2-features-t">With Cooling Mode on, Frostbyte caps the CPU below its maximum boost speed so it generates less heat, at some cost to peak performance.</div>
+      <div class="s2-features-h">Reduce Fan Noise</div>
+      <div class="s2-features-t">Less heat means your cooling fans spin up less often and less hard, so your PC runs quieter.</div>
+      <div class="s2-features-h">Lower Power Use</div>
+      <div class="s2-features-t">Limiting boost often reduces power draw too, which can help a laptop last longer away from the outlet.</div>
+    </div>
+  </div>
+</div></div>
+
+<div id="how-it-works" class="section-wrapper sw3"><div class="section s3">
+  <h2>See How Frostbyte Works</h2>
+  <div class="section-subh">One switch, a tray icon, and a command line for when you want it. Turning it off restores your previous settings.</div>
+  <div class="shots">
+    <figure><img src="assets/window-off.png" alt="Cooling Mode off"><figcaption>Cooling Mode off (orange)</figcaption></figure>
+    <figure><img src="assets/window-on.png" alt="Cooling Mode on"><figcaption>Cooling Mode on (blue)</figcaption></figure>
+    <figure><img src="assets/settings.png" alt="Settings dialog"><figcaption>Settings</figcaption></figure>
+  </div>
+</div></div>
+
+<div id="why-use-frostbyte" class="section-wrapper sw4"><div class="section s4">
+  <h2>Why Use Frostbyte: Features</h2>
+  <div class="s4-features">
+    <div class="s4-feature-container"><div class="s4-feature f1"><h3>Keep Your System Cool</h3>
+      <p>Frostbyte creates a Windows power plan named "Frostbyte" by copying the built-in Balanced plan, then disables CPU boost and caps the maximum processor state at 99%. The result is a cooler CPU under everyday workloads.</p></div></div>
+    <div class="s4-feature-container"><div class="s4-feature f2"><h3>One Switch, Fully Reversible</h3>
+      <p>Turn Cooling Mode off and Frostbyte reactivates your original power plan and deletes its own. Nothing is left behind.</p></div></div>
+    <div class="s4-feature-container"><div class="s4-feature f3"><h3>Lives in Your Tray</h3>
+      <p>A system tray icon with a right-click menu lets you toggle Cooling Mode without opening the window. Choose to launch at sign-in, start in the background, enable Cooling Mode on launch, or minimize to tray on close.</p></div></div>
+    <div class="s4-feature-container"><div class="s4-feature f4"><h3>Work in Peace</h3>
+      <p>Enjoy a quieter computer. Startup runs through a Task Scheduler task, so Frostbyte has the elevated rights it needs without a UAC prompt at every sign-in.</p></div></div>
+    <div class="s4-feature-container"><div class="s4-feature f5"><h3>Scriptable</h3>
+      <p>The bundled <code>CoolMode.exe</code> command-line tool supports <code>on</code>, <code>off</code>, <code>toggle</code> and <code>status</code>, ideal for shortcuts and automation.</p></div></div>
+    <div class="s4-feature-container"><div class="s4-feature f6"><h3>Safe, Verified Updates</h3>
+      <p>An optional daily check against GitHub Releases asks for your confirmation before installing anything, and downloads are verified by SHA-256 checksum.</p></div></div>
+  </div>
+  <div class="s4-download-container"><a href="https://github.com/scuba3198/Frostbyte/releases/latest" class="download-btn">Download</a></div>
+</div></div>
+
+<div class="section-wrapper sw5"><div class="section s5">
+  <h2>How to Install and Use Frostbyte</h2>
+  <div class="install-steps">
+    <div class="install-step"><div><div>1</div></div><h4>Download</h4><p>Get <code>Frostbyte-Setup-x.y.z.exe</code> from the latest release on GitHub.</p></div>
+    <div class="install-step"><div><div>2</div></div><h4>Install</h4><p>Run the installer. Because the app is unsigned, Windows SmartScreen may warn you: choose "More info", then "Run anyway".</p></div>
+    <div class="install-step"><div><div>3</div></div><h4>Launch</h4><p>Open Frostbyte and accept the administrator prompt, which is required to change power settings. No registration or activation codes needed.</p></div>
+    <div class="install-step"><div><div>4</div></div><h4>Flip the Switch</h4><p>Click the switch to turn Cooling Mode on or off, and use Settings to choose how Frostbyte starts and where it lives.</p></div>
+  </div>
+<pre class="code"><b>CoolMode.exe</b> on        <i># enable Cooling Mode</i>
+<b>CoolMode.exe</b> off       <i># restore your previous power plan</i>
+<b>CoolMode.exe</b> toggle
+<b>CoolMode.exe</b> status</pre>
+</div></div>
+
+<div id="performance" class="section-wrapper sw6"><div class="section s6">
+  <h2>What You Need to Know about CPU Boost and PC Performance</h2>
+  <div class="section-subh">Modern processors boost to very high clock speeds for short bursts, which brings heat, fan noise and power draw with it. Capping boost trades a little peak performance for a noticeably calmer machine. Frostbyte was built and tested on an Intel laptop; results on desktops and AMD CPUs may vary.</div>
+  <div class="s6-spacer"></div>
+  <div class="section-subh2">What Cooling Mode changes:</div>
+  <div class="happens">
+    <div class="happen"><h4>Processor Boost Disabled</h4><div class="happen-content">The CPU no longer pushes to its maximum boost speed, which is where most of the extra heat and power draw comes from.</div></div>
+    <div class="happen"><h4>Maximum Processor State at 99%</h4><div class="happen-content">Capping the maximum state just below 100% keeps Windows from engaging turbo frequencies. Frostbyte sets five processor options in total on its power plan.</div></div>
+    <div class="happen"><h4>Cooler, Quieter Hardware</h4><div class="happen-content">Lower sustained temperatures mean fans work less, and less thermal stress on the CPU and the cooling system over time.</div></div>
+    <div class="happen"><h4>Some Peak Performance Is Traded Away</h4><div class="happen-content">Short, demanding tasks may finish a little slower. Turn Cooling Mode off whenever you need full speed.</div></div>
+  </div>
+  <div class="section-subh2">For a cooler PC overall, also consider:</div>
+  <div class="measures">
+    <div class="measure"><h4>Ensure Proper Ventilation</h4><div class="measure-content">Keep vents clear and give a laptop room to breathe. Good airflow carries heat away from the CPU.</div></div>
+    <div class="measure"><h4>Maintain a Clean System</h4><div class="measure-content">Regularly clean dust from fans and heat sinks. Accumulated dust impedes airflow and raises temperatures.</div></div>
+    <div class="measure"><h4>Apply Quality Thermal Paste</h4><div class="measure-content">If you reseat a cooler, use quality thermal paste for better heat transfer between the CPU and heat sink.</div></div>
+    <div class="measure"><h4>Consider Ambient Temperature</h4><div class="measure-content">A cooler room helps. Avoid enclosed spaces with poor ventilation.</div></div>
+  </div>
+  <div class="finally" style="margin-top:80px;margin-bottom:64px">
+    <h3>Open Source</h3>
+    Frostbyte is written in C# on .NET Framework with Windows Forms, built with a single PowerShell script, and released under the MIT license. Contributions and issues are welcome on <a href="https://github.com/scuba3198/Frostbyte" target="_blank" rel="noopener">GitHub</a>.
+  </div>
+</div></div>
+
+<div class="section-wrapper sw7"><div class="section s7">
+  <div class="s7-download-container">
+    <a href="https://github.com/scuba3198/Frostbyte/releases/latest" class="download-btn">Download</a>
+    <a href="https://github.com/scuba3198/Frostbyte" target="_blank" rel="noopener" class="download-btn gh alt">View on GitHub</a>
+  </div>
+  <div class="s7-footer"><span>Compatible with: Windows 11, 10</span><span>Size: 2.1MB</span><span>Current version: 1.3.0</span></div>
+</div></div>
+
+<div class="section-wrapper sw-footer"><div class="section s-footer">
+  <div class="f-menu">
+    <a target="_blank" rel="noopener" href="https://github.com/scuba3198/Frostbyte/blob/main/LICENSE">MIT License</a>
+    <a target="_blank" rel="noopener" href="https://github.com/scuba3198/Frostbyte/releases">Releases</a>
+    <a target="_blank" rel="noopener" href="https://github.com/scuba3198/Frostbyte/issues">Report an Issue</a>
+    <a target="_blank" rel="noopener" href="https://github.com/scuba3198/Frostbyte">GitHub</a>
+  </div>
+  <div class="copyright">Open source under the MIT license</div>
+  <div class="trademark">Microsoft and Windows symbols are trademarks of the Microsoft group of companies.</div>
+</div></div>
+
+</article></section>
+<script src="script.js"></script>
+</body>
+</html>

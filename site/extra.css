@@ -1,0 +1,35 @@
+/* Frostbyte additions on top of the base layout */
+.h-logo{display:flex;align-items:center;gap:10px;width:auto;background:none;color:#fff;font-size:26px;font-weight:700;text-decoration:none;letter-spacing:-.02em}
+.h-logo svg{width:34px;height:34px}
+.h-logo span{background:linear-gradient(101deg,#3F7CEF,#17BBEE);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.s-header{align-items:center}
+.download-btn.gh::before{background:none;content:"";width:0;margin:0}
+.download-btn.alt{background:none;border:1px solid #3F7CEF}
+.download-btn.alt:hover{background:linear-gradient(101deg,#5D95FF,#4ED5FF)}
+.s2-shot{position:relative;width:440px;z-index:1}
+.s2-shot img{display:block;width:100%;border-radius:8px;border:1px solid rgb(45 148 239/.5)}
+.s2-shot img.off{display:none}
+.s2-content.off .s2-shot img.on{display:none}
+.s2-content.off .s2-shot img.off{display:block;border-color:#B65139}
+.s2-shot .s2-app-switcher{top:96px;right:-57px}
+.s2-content>div:first-child{z-index:1}
+.s1-content>h1{width:560px}
+.s1-content>.p1,.s1-content>.p2{width:520px}
+.s1-btns{display:flex;gap:16px;flex-wrap:wrap}
+.shots{display:flex;gap:24px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin:48px 0}
+.shots img{width:100%;border-radius:10px;border:1px solid #2B2B33}
+.shots figure{flex:1 1 340px;max-width:380px}
+.shots figcaption{margin-top:10px;text-align:center;color:#9393A1;font-size:14px}
+pre.code{background:#1A1A21;border:1px solid #2B2B33;border-radius:12px;padding:20px 24px;color:#ECECEF;font-size:16px;line-height:26px;overflow:auto;margin:48px 0}
+pre.code b{color:#17BBEE;font-weight:500}
+pre.code i{color:#9393A1}
+.finally code,.install-step code,.s4-feature code{background:#101014;padding:2px 6px;border-radius:5px;color:#DDF3FF}
+@media (max-width:1200px){
+ .s-header{gap:12px}
+ .s1-content>h1,.s1-content>.p1,.s1-content>.p2{width:100%}
+ .s1-btns{justify-content:center}
+ .s2-shot{transform:scale(.615);transform-origin:top center;margin-bottom:-110px}
+ .download-btn{min-width:200px}
+ pre.code{font-size:13px;padding:14px}
+ .h-logo{font-size:22px}
+}
