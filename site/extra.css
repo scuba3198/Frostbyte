@@ -33,3 +33,4 @@ pre.code i{color:#9393A1}
  pre.code{font-size:13px;padding:14px}
  .h-logo{font-size:22px}
 }
+b[data-release-version],b[data-release-size]{font-weight:inherit}
