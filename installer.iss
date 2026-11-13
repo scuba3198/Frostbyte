@@ -1,7 +1,10 @@
 ; Frostbyte installer - build with Inno Setup 6:  ISCC.exe installer.iss
 ; (build.ps1 must have been run first so Frostbyte.exe and CoolMode.exe exist)
 #define AppName "Frostbyte"
-#define AppVersion "1.2.0"
+; AppVersion is normally passed in by build.ps1 / CI (ISCC /DAppVersion=x.y.z); this is the local fallback.
+#ifndef AppVersion
+  #define AppVersion "0.0.0"
+#endif
 #define AppPublisher "scuba3198"
 #define AppURL "https://github.com/scuba3198/Frostbyte"
 
