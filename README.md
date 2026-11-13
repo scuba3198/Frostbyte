@@ -1,6 +1,28 @@
-# ❄️ Frostbyte
+<h1 align="center">❄️ Frostbyte</h1>
 
-**One click to run your PC cooler and quieter.**
+<p align="center"><b>One click to run your PC cooler and quieter.</b></p>
+
+<p align="center">
+  <a href="https://github.com/scuba3198/Frostbyte/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/scuba3198/Frostbyte?style=for-the-badge&color=2196f3&label=latest"></a>
+  <a href="https://github.com/scuba3198/Frostbyte/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/scuba3198/Frostbyte/total?style=for-the-badge&color=1e88e5"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/scuba3198/Frostbyte?style=for-the-badge&color=43a047"></a>
+  <img alt="Platform: Windows 10 and 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4?style=for-the-badge">
+</p>
+<p align="center">
+  <img alt="Built with C# and .NET Framework" src="https://img.shields.io/badge/built%20with-C%23%20%2F%20.NET%20Framework-7b1fa2?style=for-the-badge">
+  <img alt="Installer: Inno Setup" src="https://img.shields.io/badge/installer-Inno%20Setup-ef6c00?style=for-the-badge">
+  <a href="https://github.com/scuba3198/Frostbyte/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/scuba3198/Frostbyte?style=for-the-badge&color=fbc02d"></a>
+  <a href="https://github.com/scuba3198/Frostbyte/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/scuba3198/Frostbyte?style=for-the-badge&color=00acc1"></a>
+  <img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-4caf50?style=for-the-badge">
+</p>
+
+<p align="center">
+  <a href="https://github.com/scuba3198/Frostbyte/releases/latest"><b>⬇ Download</b></a> ·
+  <a href="#get-started-2-minutes">Get started</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="#questions">FAQ</a> ·
+  <a href="#how-it-works-for-the-curious">How it works</a>
+</p>
 
 Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn it on and your processor (CPU) stops pushing itself to its absolute maximum speed. That means less heat, a calmer fan, and often better battery life, at the cost of some peak performance. Turn it off and everything goes back exactly as it was.
 
