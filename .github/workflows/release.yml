@@ -22,6 +22,9 @@ jobs:
       - id: rp
         uses: googleapis/release-please-action@v4
         with:
+          # A PAT or GitHub App token lets release PRs trigger CI; PRs opened with
+          # GITHUB_TOKEN do not, so the required "build" check would never run on them.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
