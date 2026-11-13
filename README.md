@@ -16,6 +16,10 @@ Both require administrator rights.
 - The power-scheme settings were derived by analysing the behaviour of a comparable commercial tool
   for interoperability; no code or assets from it are included.
 
+## Installer
+Install [Inno Setup 6](https://jrsoftware.org/isinfo.php), run `build.ps1`, then `ISCC.exe installer.iss` to produce `dist\Frostbyte-Setup-1.0.0.exe`.
+
 ## License
 MIT - see [LICENSE](LICENSE).
+
 
