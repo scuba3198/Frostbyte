@@ -41,10 +41,13 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 Name: "startup"; Description: "&Launch Frostbyte automatically when I sign in to Windows"; GroupDescription: "Options:"; Flags: unchecked
 
 [Files]
+; PawnIO (signed driver for the accurate CPU temperature) is fetched and hash-checked by build.ps1, then installed silently.
+Source: "dist\cache\PawnIO_setup.exe"; Flags: dontcopy
 Source: "Frostbyte.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "CoolMode.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "third_party\PawnIO\COPYING"; DestDir: "{app}\third_party\PawnIO"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Frostbyte.exe"; Tasks: startmenuicon
@@ -70,4 +73,35 @@ var ResultCode: Integer;
 begin
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM Frostbyte.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := '';
+end;
+
+// PawnIO is the small signed driver Frostbyte uses to read the real CPU temperature (see third_party\PawnIO).
+// Its official installer is bundled and run silently; skipped if PawnIO is already installed.
+function PawnIoInstalled: Boolean;
+begin
+  Result := RegKeyExists(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO') or
+            RegKeyExists(HKLM32, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO');
+end;
+
+procedure InstallPawnIo;
+var Rc: Integer; Failed: Boolean;
+begin
+  if PawnIoInstalled then Exit;
+  Failed := True;
+  try
+    ExtractTemporaryFile('PawnIO_setup.exe');
+    // -install -silent is the installer's own silent mode; 3010 just means "restart when convenient"
+    if Exec(ExpandConstant('{tmp}\PawnIO_setup.exe'), '-install -silent', '', SW_HIDE, ewWaitUntilTerminated, Rc) then
+      Failed := (Rc <> 0) and (Rc <> 3010);
+  except
+    Log('PawnIO install failed: ' + GetExceptionMessage);
+  end;
+  if Failed and not WizardSilent then
+    MsgBox('Frostbyte was installed, but the PawnIO driver could not be installed. Frostbyte will still work and ' +
+           'show a rougher CPU temperature. You can add PawnIO later with "winget install namazso.PawnIO".', mbInformation, MB_OK);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then InstallPawnIo;
 end;
