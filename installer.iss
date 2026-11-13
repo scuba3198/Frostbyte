@@ -1,7 +1,7 @@
 ; Frostbyte installer - build with Inno Setup 6:  ISCC.exe installer.iss
 ; (build.ps1 must have been run first so Frostbyte.exe and CoolMode.exe exist)
 #define AppName "Frostbyte"
-#define AppVersion "1.1.0"
+#define AppVersion "1.1.1"
 #define AppPublisher "scuba3198"
 #define AppURL "https://github.com/scuba3198/Frostbyte"
 
@@ -46,7 +46,9 @@ Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Frostbyte.exe"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Frostbyte.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Frostbyte.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; runascurrentuser: Frostbyte requires administrator rights, and by default Inno launches "Run" entries
+; as the original (non-elevated) user, which fails with CreateProcess error 740.
+Filename: "{app}\Frostbyte.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent runascurrentuser
 
 [UninstallRun]
 ; Stop the tray app, make sure the user is not left on the Frostbyte power plan, and remove the startup task.
