@@ -13,9 +13,9 @@ Produces `Frostbyte.exe` (GUI) and `CoolMode.exe` (CLI: `on | off | toggle | sta
 Both require administrator rights.
 
 ## Notes
-- The temperature readout uses ACPI thermal zones and may show `--` on machines that don't expose them.
 - The power-scheme settings were derived by analysing the behaviour of a comparable commercial tool
   for interoperability; no code or assets from it are included.
 
 ## License
 MIT - see [LICENSE](LICENSE).
+

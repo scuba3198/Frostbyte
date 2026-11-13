@@ -1,60 +1,71 @@
-// CoolMode GUI - window with CPU temperature and a Cooling Mode ON/OFF switch.
+// Frostbyte GUI - window with the CPU name and a Cooling Mode ON/OFF switch.
 // Uses CoolMode.cs (same project) for the actual power-scheme logic.
-// Build: see build.ps1.   "--snap file.png" renders the window to a PNG and exits (layout preview).
+// Build: see build.ps1.   "--snap file.png [on|off]" renders the window to a PNG and exits (layout preview).
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
-using System.Management;
-using System.Threading;
 using System.Windows.Forms;
+
+static class Theme
+{
+    // OFF = orange/red, ON = blue (blended by t in 0..1)
+    public static Color Blend(Color a, Color b, float t)
+    {
+        return Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+    }
+}
 
 class Toggle : Control
 {
     bool on; float pos; readonly System.Windows.Forms.Timer anim = new System.Windows.Forms.Timer();
     public event EventHandler Toggled;
+    public event EventHandler PosChanged;
+    public float Pos { get { return pos; } }
     public Toggle()
     {
-        SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw |
-                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.SupportsTransparentBackColor, true);
         Size = new Size(144, 56); Cursor = Cursors.Hand; anim.Interval = 15;
         anim.Tick += (s, e) =>
         {
             float t = on ? 1f : 0f; pos += (t - pos) * 0.35f;
             if (Math.Abs(t - pos) < 0.01f) { pos = t; anim.Stop(); }
-            Invalidate();
+            Invalidate(); if (PosChanged != null) PosChanged(this, EventArgs.Empty);
         };
     }
     public bool On { get { return on; } set { if (on != value) { on = value; anim.Start(); } } }
+    public void SetImmediate(bool v) { on = v; pos = v ? 1f : 0f; Invalidate(); if (PosChanged != null) PosChanged(this, EventArgs.Empty); }
     protected override void OnClick(EventArgs e) { base.OnClick(e); if (Toggled != null) Toggled(this, e); }
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias; g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
         var r = new Rectangle(1, 1, Width - 3, Height - 3);
+        Color orange = Color.FromArgb(238, 128, 78);
         using (var path = Pill(r))
         {
-            Color a = Blend(Color.FromArgb(58, 58, 62), Color.FromArgb(62, 108, 226), pos);
-            Color b = Blend(Color.FromArgb(70, 70, 74), Color.FromArgb(30, 178, 232), pos);
+            Color a = Theme.Blend(Color.FromArgb(78, 40, 34), Color.FromArgb(62, 108, 226), pos);
+            Color b = Theme.Blend(Color.FromArgb(96, 54, 42), Color.FromArgb(30, 178, 232), pos);
             using (var br = new LinearGradientBrush(r, a, b, 0f)) g.FillPath(br, path);
         }
         int d = r.Height - 8; float x = r.X + 4 + pos * (r.Width - d - 8);
         using (var f = new Font("Segoe UI Semibold", 13f, FontStyle.Bold))
         using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
         {
-            if (pos > 0.5f) g.DrawString("ON", f, Brushes.White, new RectangleF(r.X + 6, r.Y, r.Width - d - 14, r.Height), sf);
-            else g.DrawString("OFF", f, Brushes.Gainsboro, new RectangleF(r.X + d + 8, r.Y, r.Width - d - 14, r.Height), sf);
+            Color tc = Theme.Blend(Color.FromArgb(246, 150, 60), Color.White, pos);
+            using (var tb = new SolidBrush(tc))
+            {
+                if (pos > 0.5f) g.DrawString("ON", f, tb, new RectangleF(r.X + 6, r.Y, r.Width - d - 14, r.Height), sf);
+                else g.DrawString("OFF", f, tb, new RectangleF(r.X + d + 8, r.Y, r.Width - d - 14, r.Height), sf);
+            }
         }
         using (var sh = new SolidBrush(Color.FromArgb(50, 0, 0, 0))) g.FillEllipse(sh, x, r.Y + 5, d, d);
-        g.FillEllipse(Brushes.White, x, r.Y + 4, d, d);
+        using (var kb = new SolidBrush(Theme.Blend(orange, Color.White, pos))) g.FillEllipse(kb, x, r.Y + 4, d, d);
     }
     static GraphicsPath Pill(Rectangle r)
     {
         var p = new GraphicsPath(); int d = r.Height;
         p.AddArc(r.X, r.Y, d, d, 90, 180); p.AddArc(r.Right - d, r.Y, d, d, 270, 180); p.CloseFigure(); return p;
-    }
-    static Color Blend(Color a, Color b, float t)
-    {
-        return Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
     }
 }
 
@@ -64,8 +75,9 @@ class FanIcon : Control
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
-        float c = Width / 2f;
-        using (var ring = new Pen(Color.FromArgb(40, 120, 220), 4f)) g.DrawEllipse(ring, 2, 2, Width - 5, Height - 5);
+        g.ScaleTransform(Width / 52f, Height / 52f);   // design units are 52x52
+        const float c = 26f;
+        using (var ring = new Pen(Color.FromArgb(40, 120, 220), 4f)) g.DrawEllipse(ring, 2, 2, 47, 47);
         using (var fill = new SolidBrush(Color.FromArgb(235, 238, 242)))
         using (var edge = new Pen(Color.FromArgb(120, 130, 145), 1f))
             for (int i = 0; i < 7; i++)
@@ -83,86 +95,94 @@ class FanIcon : Control
 
 class Header : Panel
 {
+    float t;   // 0 = off (orange), 1 = on (blue)
+    public float T { get { return t; } set { t = value; Invalidate(); } }
     public Header() { DoubleBuffered = true; }
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
         var r = ClientRectangle;
-        using (var br = new LinearGradientBrush(r, Color.FromArgb(14, 52, 120), Color.FromArgb(38, 138, 232), 20f)) g.FillRectangle(br, r);
+        Color c1 = Theme.Blend(Color.FromArgb(168, 56, 44), Color.FromArgb(14, 52, 120), t);
+        Color c2 = Theme.Blend(Color.FromArgb(224, 104, 74), Color.FromArgb(38, 138, 232), t);
+        Color lc = Theme.Blend(Color.FromArgb(255, 176, 140), Color.FromArgb(170, 225, 255), t);
+        using (var br = new LinearGradientBrush(r, c1, c2, 20f)) g.FillRectangle(br, r);
+        float k = Width / 440f;
         var rnd = new Random(7);
-        using (var pen = new Pen(Color.FromArgb(70, 170, 225, 255), 1.4f))
-        using (var pad = new SolidBrush(Color.FromArgb(70, 170, 225, 255)))
+        using (var pen = new Pen(Color.FromArgb(70, lc), 1.4f * k))
+        using (var pad = new SolidBrush(Color.FromArgb(70, lc)))
         {
             for (int i = 0; i < 60; i++)
             {
-                int x = rnd.Next(0, r.Width), y = rnd.Next(0, r.Height), l = rnd.Next(20, 90);
+                int x = rnd.Next(0, r.Width), y = rnd.Next(0, r.Height), l = (int)(rnd.Next(20, 90) * k);
                 int dx = rnd.Next(2) == 0 ? l : 0, dy = dx == 0 ? l : 0;
                 g.DrawLine(pen, x, y, x + dx, y + dy);
-                g.FillEllipse(pad, x - 3, y - 3, 6, 6);
-                if (rnd.Next(3) == 0) { g.DrawLine(pen, x + dx, y + dy, x + dx + (dx == 0 ? 18 : 0), y + dy + (dx == 0 ? 0 : 18)); }
+                g.FillEllipse(pad, x - 3 * k, y - 3 * k, 6 * k, 6 * k);
+                if (rnd.Next(3) == 0) g.DrawLine(pen, x + dx, y + dy, x + dx + (dx == 0 ? 18 * k : 0), y + dy + (dx == 0 ? 0 : 18 * k));
             }
-            var chip = new Rectangle(r.Width / 2 - 22, r.Height / 2 - 30, 62, 62);
-            using (var fillc = new SolidBrush(Color.FromArgb(40, 150, 210, 255))) g.FillRectangle(fillc, chip);
-            g.DrawRectangle(pen, chip);
-            for (int i = 0; i < 6; i++) { g.DrawLine(pen, chip.X + 8 + i * 9, chip.Y - 8, chip.X + 8 + i * 9, chip.Y); g.DrawLine(pen, chip.X + 8 + i * 9, chip.Bottom, chip.X + 8 + i * 9, chip.Bottom + 8); }
+            float cs = 70 * k; var chip = new RectangleF(r.Width * 0.72f, r.Height / 2f - cs / 2, cs, cs);
+            using (var fillc = new SolidBrush(Color.FromArgb(40, lc))) g.FillRectangle(fillc, chip.X, chip.Y, chip.Width, chip.Height);
+            g.DrawRectangle(pen, chip.X, chip.Y, chip.Width, chip.Height);
+            for (int i = 0; i < 6; i++)
+            {
+                float px = chip.X + (9 + i * 10) * k;
+                g.DrawLine(pen, px, chip.Y - 9 * k, px, chip.Y); g.DrawLine(pen, px, chip.Bottom, px, chip.Bottom + 9 * k);
+            }
         }
     }
 }
 
 class MainForm : Form
 {
-    readonly Label temp = new Label(), unit = new Label(), cpu = new Label(), name = new Label(), title = new Label();
+    readonly Label cpu = new Label(), name = new Label(), title = new Label();
     readonly Toggle toggle = new Toggle();
+    readonly Header head = new Header();
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
-    volatile int busy;
 
-    public MainForm(bool snap)
+    readonly FanIcon fan = new FanIcon();
+
+    // Lay everything out in 96-dpi design units multiplied by k (= current DPI / 96).
+    void DoLayout(float k)
     {
-        Text = "Frostbyte"; ClientSize = new Size(440, 270); FormBorderStyle = FormBorderStyle.FixedSingle;
+        Func<int, int> s = v => (int)Math.Round(v * k);
+        ClientSize = new Size(s(440), s(270));
+        head.Height = s(150);
+        cpu.Location = new Point(s(18), s(14)); name.Location = new Point(s(18), s(46)); name.Size = new Size(s(290), s(60));
+        fan.Size = new Size(s(52), s(52)); fan.Location = new Point(s(22), s(188));
+        title.Location = new Point(s(86), s(196));
+        toggle.Size = new Size(s(144), s(56)); toggle.Location = new Point(s(270), s(186));
+        head.Invalidate();
+    }
+    static float SystemScale() { using (var g = Graphics.FromHwnd(IntPtr.Zero)) return g.DpiX / 96f; }
+
+    public MainForm(bool snap, bool snapOn)
+    {
+        AutoScaleMode = AutoScaleMode.None;   // we scale by hand in DoLayout
+        Text = "Frostbyte"; FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false; StartPosition = FormStartPosition.CenterScreen; BackColor = Color.FromArgb(18, 18, 18);
         Font = new Font("Segoe UI", 10f); DoubleBuffered = true;
 
-        var head = new Header { Dock = DockStyle.Top, Height = 150 };
+        head.Dock = DockStyle.Top;
         cpu.Text = "CPU"; cpu.Font = new Font("Segoe UI Semibold", 14f, FontStyle.Bold);
-        name.Text = CpuName(); name.Font = new Font("Segoe UI", 12.5f); name.AutoSize = false; name.Size = new Size(250, 60);
-        foreach (var l in new[] { cpu, name, temp, unit }) { l.BackColor = Color.Transparent; l.ForeColor = Color.White; head.Controls.Add(l); }
-        cpu.AutoSize = true; cpu.Location = new Point(18, 12); name.Location = new Point(18, 42);
-        temp.Font = new Font("Segoe UI Light", 66f); temp.AutoSize = true; temp.Text = "--";
-        unit.Font = new Font("Segoe UI Light", 20f); unit.AutoSize = true; unit.Text = "°C";
+        name.Text = CpuName(); name.Font = new Font("Segoe UI", 12.5f); name.AutoSize = false;
+        foreach (var l in new[] { cpu, name }) { l.BackColor = Color.Transparent; l.ForeColor = Color.White; head.Controls.Add(l); }
+        cpu.AutoSize = true;
         Controls.Add(head);
 
-        var fan = new FanIcon { Location = new Point(22, 188) };
         title.Text = "Cooling Mode"; title.ForeColor = Color.White; title.Font = new Font("Segoe UI Semibold", 15f);
-        title.AutoSize = true; title.Location = new Point(86, 196);
-        toggle.Location = new Point(270, 186); toggle.Toggled += OnToggle;
+        title.AutoSize = true; title.BackColor = Color.Transparent;
+        toggle.Toggled += OnToggle;
+        toggle.PosChanged += (s, e) => head.T = toggle.Pos;
         Controls.AddRange(new Control[] { fan, title, toggle });
-        head.Resize += (s, e) => PlaceTemp(); PlaceTemp();
+        DoLayout(SystemScale());
 
-        try { toggle.On = CoolMode.IsOn(); } catch { }
-        if (snap) { temp.Text = "47"; PlaceTemp(); toggle.On = true; return; }
-        poll.Interval = 2000; poll.Tick += (s, e) => Refresh2(); poll.Start(); Refresh2();
-    }
-    void PlaceTemp()
-    {
-        int right = 440 - 14;
-        unit.Location = new Point(right - unit.PreferredWidth, 22);
-        temp.Location = new Point(right - unit.PreferredWidth - temp.PreferredWidth + 14, 2);
+        if (snap) { toggle.SetImmediate(snapOn); return; }
+        try { toggle.SetImmediate(CoolMode.IsOn()); } catch { }
+        poll.Interval = 2000; poll.Tick += (s, e) => { try { toggle.On = CoolMode.IsOn(); } catch { } }; poll.Start();
     }
     void OnToggle(object s, EventArgs e)
     {
         try { if (CoolMode.IsOn()) CoolMode.Disable(); else CoolMode.Enable(); toggle.On = CoolMode.IsOn(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
-    }
-    void Refresh2()
-    {
-        try { toggle.On = CoolMode.IsOn(); } catch { }
-        if (Interlocked.Exchange(ref busy, 1) == 1) return;
-        ThreadPool.QueueUserWorkItem(_ =>
-        {
-            double t = ReadTemp();
-            try { BeginInvoke((Action)(() => { temp.Text = t > 0 ? Math.Round(t).ToString("0") : "--"; PlaceTemp(); })); } catch { }
-            busy = 0;
-        });
     }
     static string CpuName()
     {
@@ -173,25 +193,6 @@ class MainForm : Form
         }
         catch { return "Processor"; }
     }
-    static double ReadTemp()
-    {
-        try   // ACPI thermal zones (tenths of Kelvin); needs administrator
-        {
-            double best = -1;
-            using (var s = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature"))
-                foreach (ManagementObject o in s.Get()) { double c = Convert.ToDouble(o["CurrentTemperature"]) / 10.0 - 273.15; if (c > best && c < 150) best = c; }
-            if (best > 0) return best;
-        }
-        catch { }
-        try   // Windows thermal-zone perf counters (Kelvin)
-        {
-            double best = -1;
-            using (var s = new ManagementObjectSearcher(@"root\CIMV2", "SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation"))
-                foreach (ManagementObject o in s.Get()) { double c = Convert.ToDouble(o["Temperature"]) - 273.15; if (c > best && c < 150) best = c; }
-            return best;
-        }
-        catch { return -1; }
-    }
 }
 
 static class CoolModeGui
@@ -200,13 +201,15 @@ static class CoolModeGui
     static void Main(string[] a)
     {
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
-        if (a.Length == 2 && a[0] == "--snap")
+        if (a.Length >= 2 && a[0] == "--snap")
         {
-            var f = new MainForm(true); f.Show(); Application.DoEvents(); Thread.Sleep(600); Application.DoEvents();
-            using (var bmp = new Bitmap(f.ClientSize.Width, f.ClientSize.Height))
-            { f.DrawToBitmap(bmp, new Rectangle(Point.Empty, f.ClientSize)); bmp.Save(a[1], System.Drawing.Imaging.ImageFormat.Png); }
+            var f = new MainForm(true, a.Length < 3 || a[2] != "off"); f.Show(); Application.DoEvents(); System.Threading.Thread.Sleep(600); Application.DoEvents();
+            System.IO.File.WriteAllText(a[1] + ".txt", "DeviceDpi=" + f.DeviceDpi + " size=" + f.Size + " screen=" + Screen.PrimaryScreen.Bounds + " client=" + f.ClientSize);
+            using (var bmp = new Bitmap(f.Width, f.Height))
+            using (var g = Graphics.FromImage(bmp))
+            { g.CopyFromScreen(f.Location, Point.Empty, f.Size); bmp.Save(a[1], System.Drawing.Imaging.ImageFormat.Png); }
             return;
         }
-        Application.Run(new MainForm(false));
+        Application.Run(new MainForm(false, false));
     }
 }
