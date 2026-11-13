@@ -14,6 +14,8 @@ static class Settings
     public static bool Background;         // start hidden in the tray
     public static bool CoolOnLaunch;        // enable Cooling Mode when the app starts
     public static bool CloseToTray = true;  // close button hides to the tray
+    public static bool AutoUpdate = true;   // check GitHub for a newer release (at most once a day)
+    public static long LastCheckTicks;      // UTC ticks of the last successful update check
 
     public static void Load()
     {
@@ -30,6 +32,8 @@ static class Settings
                     case "Background": Background = b; break;
                     case "CoolOnLaunch": CoolOnLaunch = b; break;
                     case "CloseToTray": CloseToTray = b; break;
+                    case "AutoUpdate": AutoUpdate = b; break;
+                    case "LastCheck": long.TryParse(v, out LastCheckTicks); break;
                 }
             }
         }
@@ -43,7 +47,8 @@ static class Settings
             Directory.CreateDirectory(Dir);
             File.WriteAllLines(FileName, new[] {
                 "Background="+ (Background ? 1 : 0), "CoolOnLaunch=" + (CoolOnLaunch ? 1 : 0),
-                "CloseToTray=" + (CloseToTray ? 1 : 0) });
+                "CloseToTray=" + (CloseToTray ? 1 : 0), "AutoUpdate=" + (AutoUpdate ? 1 : 0),
+                "LastCheck=" + LastCheckTicks });
         }
         catch { }
     }

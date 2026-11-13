@@ -86,6 +86,8 @@ Click the **⚙ gear** in the top-right corner.
 | **Launch app in background mode** | Starts hidden in the system tray (the little icons near the clock) instead of opening a window. |
 | **Enable Cooling Mode on app launch** | Switches Cooling Mode on every time Frostbyte starts. Combine this with the two options above for "set and forget". |
 | **Close button minimizes to system tray** | Clicking **X** hides the window instead of quitting. Frostbyte keeps running in the tray. |
+| **Check for updates automatically** | About once a day Frostbyte asks GitHub whether a newer version exists and shows a tray notification if so. It never installs anything without asking you first. Untick it to turn the check off. |
+| **Check for updates** (button) | Checks right now. If there's a new version it offers to download and install it (the download is verified against the checksum GitHub publishes for it). |
 
 <details>
 <summary><h3>The tray icon</h3></summary>
@@ -107,7 +109,7 @@ Look near the clock (you may need to click the **^** arrow). The snowflake icon 
 <details>
 <summary><b>Is it safe?</b></summary>
 
-Yes. Frostbyte only creates and switches a normal Windows *power plan*, the same thing you'd find under *Control Panel → Power Options*. It doesn't touch your hardware directly, install drivers, or connect to the internet.
+Yes. Frostbyte only creates and switches a normal Windows *power plan*, the same thing you'd find under *Control Panel → Power Options*. It doesn't touch your hardware directly or install drivers. The only time it goes online is the optional update check (see Settings), which talks only to GitHub and sends nothing about you or your PC.
 
 </details>
 
@@ -206,6 +208,7 @@ The behavior was worked out by observing a comparable commercial tool's actual e
 | `CoolMode.cs` | The core: creates/activates/deletes the power plan using Windows' `powrprof.dll` API (`PowerDuplicateScheme`, `PowerWriteACValueIndex`, `PowerWriteDCValueIndex`, `PowerSetActiveScheme`, …). Also builds the command-line tool `CoolMode.exe`. |
 | `CoolModeGui.cs` | The window, settings dialog and tray icon (Windows Forms, all custom-drawn). |
 | `Settings.cs` | Saves your choices to `%AppData%\Frostbyte\settings.ini` and manages the startup task. |
+| `Updater.cs` | The update check (GitHub releases API) and the download + checksum + launch-installer flow. |
 | `Logo.cs`, `tools/IconGen.cs` | The logo is drawn in code; the icon generator turns it into `Frostbyte.ico`. |
 | `installer.iss` | The [Inno Setup](https://jrsoftware.org/isinfo.php) script for the installer. |
 | `build.ps1` | Builds everything using only the compiler that ships with Windows. |
@@ -238,6 +241,14 @@ CoolMode.exe status    prints ON/OFF (exit code 1 = on, 0 = off)
 </details>
 
 <details>
+<summary><h3>Updates and releases</h3></summary>
+
+- **In the app:** `Updater.cs` calls GitHub's public API (`/repos/scuba3198/Frostbyte/releases/latest`), compares the release tag with the version stamped into the running exe, and, only if you agree, downloads `Frostbyte-Setup-x.y.z.exe`, verifies its SHA-256 against the digest GitHub publishes, and starts it. Requests carry a generic `Frostbyte-UpdateCheck` user agent and nothing else.
+- **For contributors:** `main` is always releasable. Changes arrive as short-lived branches and pull requests that must pass CI (which builds the app *and* the installer). PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, …). A bot ([release-please](https://github.com/googleapis/release-please)) keeps a "Release x.y.z" pull request open with the next version and changelog; merging it tags the release and CI attaches the installer. Nobody bumps version numbers by hand. Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+</details>
+
+<details>
 <summary><h3>Build it yourself</h3></summary>
 
 You only need Windows. No SDKs or package managers.
@@ -246,10 +257,10 @@ You only need Windows. No SDKs or package managers.
 powershell -File build.ps1
 ```
 
-This produces `Frostbyte.ico`, `Frostbyte.exe` and `CoolMode.exe`. To also build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and run:
+This produces `Frostbyte.ico`, `Frostbyte.exe` and `CoolMode.exe`. To also build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and add `-Installer`:
 
-```
-ISCC.exe installer.iss
+```powershell
+powershell -File build.ps1 -Installer
 ```
 
 The installer appears in `dist\`.

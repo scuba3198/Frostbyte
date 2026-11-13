@@ -200,7 +200,7 @@ class SettingsForm : Form
         Font = new Font("Segoe UI", 11.5f);
         try { Icon = Logo.MakeIcon(32, true); } catch { }
         int top = 24, row = 54;
-        ClientSize = new Size(Dpi.S(440), Dpi.S(top * 2 + row * 4 - 14));
+        ClientSize = new Size(Dpi.S(440), Dpi.S(top * 2 + row * 5 + 56));
 
         Add(0, top, row, "Launch app on PC startup", Startup.IsEnabled(), v =>
         {
@@ -210,6 +210,42 @@ class SettingsForm : Form
         Add(1, top, row, "Launch app in background mode", Settings.Background, v => { Settings.Background = v; Settings.Save(); }, false);
         Add(2, top, row, "Enable Cooling Mode on app launch", Settings.CoolOnLaunch, v => { Settings.CoolOnLaunch = v; Settings.Save(); }, false);
         Add(3, top, row, "Close button minimizes to system tray", Settings.CloseToTray, v => { Settings.CloseToTray = v; Settings.Save(); }, false);
+        Add(4, top, row, "Check for updates automatically", Settings.AutoUpdate, v => { Settings.AutoUpdate = v; Settings.Save(); }, false);
+
+        // version + manual update check
+        int y = top + 5 * row + 4;
+        var ver = new Label { Text = "Frostbyte v" + Updater.CurrentText, AutoSize = true, ForeColor = Color.Silver, BackColor = Color.Transparent, Location = new Point(Dpi.S(24), Dpi.S(y + 8)) };
+        var btn = new Button
+        {
+            Text = "Check for updates", FlatStyle = FlatStyle.Flat, BackColor = Theme.Accent, ForeColor = Color.White, Cursor = Cursors.Hand,
+            Font = new Font("Segoe UI Semibold", 10.5f), Size = new Size(Dpi.S(170), Dpi.S(38)), Location = new Point(Dpi.S(440 - 24 - 170), Dpi.S(y))
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Click += (s, e) => CheckNow(btn);
+        Controls.Add(ver); Controls.Add(btn);
+    }
+
+    void CheckNow(Button btn)
+    {
+        btn.Enabled = false; btn.Text = "Checking…";
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            UpdateInfo info = null; string error = null;
+            try { info = Updater.Fetch(); Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save(); } catch (Exception ex) { error = ex.Message; }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    btn.Enabled = true; btn.Text = "Check for updates";
+                    var main = Owner as MainForm;
+                    if (error != null) MessageBox.Show(this, "Couldn't check for updates. Check your internet connection and try again.\n\n" + error, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else if (Updater.IsNewer(info) && main != null) UpdateFlow.Prompt(main, info);
+                    else if (Updater.IsNewer(info)) MessageBox.Show(this, "Version " + Updater.Format(info.Latest) + " is available:\n" + info.PageUrl, "Frostbyte");
+                    else MessageBox.Show(this, "You're up to date. Frostbyte " + Updater.CurrentText + " is the latest version.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+            }
+            catch { }
+        });
     }
     void Add(int i, int top, int row, string text, bool val, Action<bool> on, bool resync)
     {
@@ -231,6 +267,29 @@ class MainForm : Form
     readonly ToolStripMenuItem coolItem = new ToolStripMenuItem("Cooling Mode");
     Icon trayOn, trayOff;
     bool allowVisible, exiting;
+    UpdateInfo pendingUpdate;
+
+    public void ExitApp() { exiting = true; Close(); }
+
+    // Once a day (if enabled) look for a newer release and tell the user via the tray; never installs on its own.
+    void AutoCheck()
+    {
+        if (!Settings.AutoUpdate) return;
+        if (DateTime.UtcNow.Ticks - Settings.LastCheckTicks < TimeSpan.FromHours(24).Ticks) return;
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                var info = Updater.Fetch();
+                Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save();
+                if (!Updater.IsNewer(info)) return;
+                pendingUpdate = info;
+                BeginInvoke((Action)(() => tray.ShowBalloonTip(15000, "Frostbyte update available",
+                    "Version " + Updater.Format(info.Latest) + " is ready. Click here to install it.", ToolTipIcon.Info)));
+            }
+            catch { }   // offline etc.: try again next launch
+        });
+    }
 
     void DoLayout()
     {
@@ -288,6 +347,9 @@ class MainForm : Form
         if (Settings.CoolOnLaunch) { try { if (!CoolMode.IsOn()) CoolMode.Enable(); } catch { } }
         SyncState(true);
         poll.Interval = 2000; poll.Tick += (s, e) => SyncState(false); poll.Start();
+        tray.BalloonTipClicked += (s, e) => { if (pendingUpdate != null) UpdateFlow.Prompt(this, pendingUpdate); };
+        var upd = new System.Windows.Forms.Timer { Interval = 20000 };   // let the app settle before touching the network
+        upd.Tick += (s, e) => { upd.Stop(); AutoCheck(); }; upd.Start();
 
         // a second launch asks this instance to show itself
         try
