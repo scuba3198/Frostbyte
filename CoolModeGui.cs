@@ -124,6 +124,12 @@ class Header : Panel
 {
     float t;   // 0 = off (orange), 1 = on (blue)
     public float T { get { return t; } set { t = value; Invalidate(); } }
+    string temp = "--"; bool approx;
+    public void SetTemp(double c, bool isApprox)
+    {
+        string s = double.IsNaN(c) ? "--" : Math.Round(c).ToString("0");
+        if (s != temp || approx != isApprox) { temp = s; approx = isApprox; Invalidate(); }
+    }
     public Header() { DoubleBuffered = true; }
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -146,7 +152,7 @@ class Header : Panel
                 g.FillEllipse(pad, x - 3 * k, y - 3 * k, 6 * k, 6 * k);
                 if (rnd.Next(3) == 0) g.DrawLine(pen, x + dx, y + dy, x + dx + (dx == 0 ? 18 * k : 0), y + dy + (dx == 0 ? 0 : 18 * k));
             }
-            float cs = 70 * k; var chip = new RectangleF(r.Width * 0.72f, r.Height / 2f - cs / 2, cs, cs);
+            float cs = 70 * k; var chip = new RectangleF(r.Width * 0.60f, r.Height / 2f - cs / 2, cs, cs);
             using (var fillc = new SolidBrush(Color.FromArgb(40, lc))) g.FillRectangle(fillc, chip.X, chip.Y, chip.Width, chip.Height);
             g.DrawRectangle(pen, chip.X, chip.Y, chip.Width, chip.Height);
             for (int i = 0; i < 6; i++)
@@ -155,6 +161,93 @@ class Header : Panel
                 g.DrawLine(pen, px, chip.Y - 9 * k, px, chip.Y); g.DrawLine(pen, px, chip.Bottom, px, chip.Bottom + 9 * k);
             }
         }
+        // live CPU temperature, big, on the right
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+        using (var big = new Font("Segoe UI Light", 54f * k * 0.75f))
+        using (var small = new Font("Segoe UI", 16f * k * 0.75f))
+        {
+            string num = (approx ? "~" : "") + temp;
+            float unitW = g.MeasureString("°C", small).Width, numW = g.MeasureString(num, big).Width - 14 * k;
+            float x = r.Width - 16 * k - unitW - numW, y = (r.Height - g.MeasureString(num, big).Height) / 2f;
+            g.DrawString(num, big, Brushes.White, x, y);
+            g.DrawString("°C", small, Brushes.White, x + numW, y + g.MeasureString(num, big).Height - g.MeasureString("°C", small).Height * 2.1f);
+        }
+    }
+}
+
+// Read-only list of live sensor values under the Cooling Mode switch (rows without data are left out).
+class SensorList : Control
+{
+    string[][] rows = new string[0][];
+    public int RowCount { get { return rows.Length; } }
+    public SensorList() { SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true); BackColor = Theme.Dark; }
+    public static int RowH { get { return Dpi.S(48); } }
+    public bool SetRows(string[][] r)
+    {
+        bool sizeChanged = r.Length != rows.Length; rows = r; Invalidate(); return sizeChanged;
+    }
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias; g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit; g.Clear(BackColor);
+        using (var line = new Pen(Color.FromArgb(58, 58, 60)))
+        using (var box = new Pen(Color.FromArgb(74, 74, 78), 1.5f))
+        using (var lf = new Font("Segoe UI", 11.5f)) using (var vf = new Font("Segoe UI", 12f))
+        using (var sl = new StringFormat { LineAlignment = StringAlignment.Center })
+        using (var sr = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            for (int i = 0; i < rows.Length; i++)
+            {
+                int y = i * RowH;
+                g.DrawLine(line, Dpi.S(22), y, Width - Dpi.S(22), y);
+                int isz = Dpi.S(30);
+                DrawIcon(g, rows[i][3], Dpi.S(26), y + (RowH - isz) / 2f, isz);
+                g.DrawString(rows[i][0], lf, Brushes.White, new RectangleF(Dpi.S(26) + isz + Dpi.S(14), y, Width / 2, RowH), sl);
+                var unitR = new Rectangle(Width - Dpi.S(24) - Dpi.S(50), y + Dpi.S(9), Dpi.S(50), RowH - Dpi.S(18));
+                var valSize = g.MeasureString(rows[i][1], vf);
+                var valR = new Rectangle(unitR.X - Dpi.S(10) - (int)valSize.Width - Dpi.S(18), unitR.Y, (int)valSize.Width + Dpi.S(18), unitR.Height);
+                foreach (var r in new[] { valR, unitR }) using (var p = Rr(r, Dpi.S(6))) g.DrawPath(box, p);
+                g.DrawString(rows[i][1], vf, Brushes.White, valR, sr);
+                g.DrawString(rows[i][2], vf, Brushes.Silver, unitR, sr);
+            }
+    }
+    static GraphicsPath Rr(RectangleF r, float rad)
+    {
+        float d = rad * 2; var p = new GraphicsPath();
+        p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90); p.CloseFigure(); return p;
+    }
+    // line-art icons drawn in a 32x32 design box (rows[i][3] picks the icon)
+    static void DrawIcon(Graphics g, string kind, float x, float y, float s)
+    {
+        var st = g.Save(); g.TranslateTransform(x, y); g.ScaleTransform(s / 32f, s / 32f);
+        using (var pen = new Pen(Color.White, 1.8f) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round })
+        {
+            switch (kind)
+            {
+                case "cpu":
+                    using (var p = Rr(new RectangleF(3, 3, 26, 26), 4)) g.DrawPath(pen, p);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        float yy = 10 + i * 6;
+                        g.DrawBezier(pen, 8, yy, 11, yy - 4, 14, yy + 4, 17, yy); g.DrawBezier(pen, 17, yy, 20, yy - 4, 23, yy + 4, 25, yy);
+                    }
+                    break;
+                case "gpu":
+                    using (var p = Rr(new RectangleF(2, 6, 28, 20), 3)) g.DrawPath(pen, p);
+                    g.DrawEllipse(pen, 7, 10, 12, 12); g.DrawEllipse(pen, 11.5f, 14.5f, 3, 3);
+                    g.DrawLine(pen, 22, 12, 27, 12); g.DrawLine(pen, 22, 16, 27, 16); g.DrawLine(pen, 22, 20, 27, 20);
+                    break;
+                case "ssd":
+                    using (var p = Rr(new RectangleF(3, 3, 26, 26), 4)) g.DrawPath(pen, p);
+                    using (var f = new Font("Segoe UI", 8f, FontStyle.Bold, GraphicsUnit.Pixel)) g.DrawString("0", f, Brushes.White, 7, 8);
+                    g.DrawLine(pen, 7, 24, 25, 24);
+                    break;
+                case "battery":
+                    using (var p = Rr(new RectangleF(2, 9, 24, 14), 3)) g.DrawPath(pen, p);
+                    g.DrawLine(pen, 28, 14, 28, 18); g.DrawLine(pen, 10, 13, 10, 19); g.DrawLine(pen, 14, 13, 14, 19);
+                    break;
+            }
+        }
+        g.Restore(st);
     }
 }
 
@@ -262,6 +355,8 @@ class MainForm : Form
     readonly Header head = new Header();
     readonly FanIcon fan = new FanIcon();
     readonly GearButton gear = new GearButton();
+    readonly SensorList list = new SensorList();
+    int sensorBusy;
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
     readonly NotifyIcon tray = new NotifyIcon();
     readonly ToolStripMenuItem coolItem = new ToolStripMenuItem("Cooling Mode");
@@ -293,9 +388,11 @@ class MainForm : Form
 
     void DoLayout()
     {
-        ClientSize = new Size(Dpi.S(440), Dpi.S(270));
+        int listH = list.RowCount * SensorList.RowH;
+        ClientSize = new Size(Dpi.S(440), Dpi.S(270) + (listH > 0 ? listH + Dpi.S(12) : 0));
+        list.Location = new Point(0, Dpi.S(264)); list.Size = new Size(Dpi.S(440), listH);
         head.Height = Dpi.S(150);
-        cpu.Location = new Point(Dpi.S(18), Dpi.S(14)); name.Location = new Point(Dpi.S(18), Dpi.S(46)); name.Size = new Size(Dpi.S(290), Dpi.S(60));
+        cpu.Location = new Point(Dpi.S(18), Dpi.S(14)); name.Location = new Point(Dpi.S(18), Dpi.S(46)); name.Size = new Size(Dpi.S(240), Dpi.S(60));
         gear.Size = new Size(Dpi.S(34), Dpi.S(34)); gear.Location = new Point(Dpi.S(440 - 44), Dpi.S(10));
         fan.Size = new Size(Dpi.S(52), Dpi.S(52)); fan.Location = new Point(Dpi.S(22), Dpi.S(188));
         title.Location = new Point(Dpi.S(86), Dpi.S(196));
@@ -328,10 +425,10 @@ class MainForm : Form
         toggle.Toggled += (s, e) => DoToggle();
         toggle.PosChanged += (s, e) => head.T = toggle.Pos;
         gear.Click += (s, e) => { using (var f = new SettingsForm()) f.ShowDialog(this); };
-        Controls.AddRange(new Control[] { fan, title, toggle });
+        Controls.AddRange(new Control[] { fan, title, toggle, list });
         DoLayout();
 
-        if (snap) { toggle.SetImmediate(snapOn); return; }
+        if (snap) { toggle.SetImmediate(snapOn); try { ShowSensors(Sensors.Read()); } catch { } return; }
 
         // tray icon (blue = cooling on, orange = off)
         Size si = SystemInformation.SmallIconSize;
@@ -346,7 +443,8 @@ class MainForm : Form
 
         if (Settings.CoolOnLaunch) { try { if (!CoolMode.IsOn()) CoolMode.Enable(); } catch { } }
         SyncState(true);
-        poll.Interval = 2000; poll.Tick += (s, e) => SyncState(false); poll.Start();
+        poll.Interval = 2000; poll.Tick += (s, e) => { SyncState(false); PollSensors(); }; poll.Start();
+        PollSensors();
         tray.BalloonTipClicked += (s, e) => { if (pendingUpdate != null) UpdateFlow.Prompt(this, pendingUpdate); };
         var upd = new System.Windows.Forms.Timer { Interval = 20000 };   // let the app settle before touching the network
         upd.Tick += (s, e) => { upd.Stop(); AutoCheck(); }; upd.Start();
@@ -361,13 +459,43 @@ class MainForm : Form
         catch { }
     }
 
+    // sensor reads (driver, SMART, perf counters) can take a few ms: do them off the UI thread
+    void PollSensors()
+    {
+        if (Interlocked.Exchange(ref sensorBusy, 1) == 1) return;
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            SensorReadings r = null;
+            try { r = Sensors.Read(); } catch { }
+            try { BeginInvoke((Action)(() => { sensorBusy = 0; if (r != null) ShowSensors(r); })); } catch { sensorBusy = 0; }
+        });
+    }
+    void ShowSensors(SensorReadings r)
+    {
+        head.SetTemp(r.CpuTemp, r.CpuApprox);
+        cpuTempText = double.IsNaN(r.CpuTemp) ? "" : "CPU " + (r.CpuApprox ? "~" : "") + Math.Round(r.CpuTemp).ToString("0") + "°C – ";
+        UpdateTrayText();
+        var rows = new System.Collections.Generic.List<string[]>();
+        if (!double.IsNaN(r.CpuGhz)) rows.Add(new[] { "CPU SPEED", r.CpuGhz.ToString("0.00") + " / " + r.CpuMaxGhz.ToString("0.00"), "GHZ", "cpu" });
+        if (!double.IsNaN(r.GpuTemp)) rows.Add(new[] { "GPU t°", Math.Round(r.GpuTemp).ToString("0"), "°C", "gpu" });
+        if (!double.IsNaN(r.SsdTemp)) rows.Add(new[] { "SSD t°", Math.Round(r.SsdTemp).ToString("0"), "°C", "ssd" });
+        if (r.Battery >= 0) rows.Add(new[] { "BATTERY", r.Battery.ToString(), "%", "battery" });
+        if (list.SetRows(rows.ToArray())) DoLayout();
+    }
+
     void SyncState(bool immediate)
     {
         bool on = false; try { on = CoolMode.IsOn(); } catch { }
         if (immediate) toggle.SetImmediate(on); else toggle.On = on;
         coolItem.Checked = on;
         if (trayOn != null) tray.Icon = on ? trayOn : trayOff;
-        tray.Text = "Frostbyte – Cooling Mode " + (on ? "ON" : "OFF");
+        coolOn = on; UpdateTrayText();
+    }
+    bool coolOn; string cpuTempText = "";
+    // hover tooltip: "Frostbyte – CPU 51°C – Cooling Mode ON" (NotifyIcon.Text is limited to 63 characters)
+    void UpdateTrayText()
+    {
+        tray.Text = "Frostbyte – " + cpuTempText + "Cooling Mode " + (coolOn ? "ON" : "OFF");
     }
     void DoToggle()
     {

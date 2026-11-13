@@ -30,6 +30,8 @@ Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn
 |---|---|
 | ![Frostbyte with Cooling Mode off](docs/window-off.png) | ![Frostbyte with Cooling Mode on](docs/window-on.png) |
 
+The main window also shows your live CPU temperature, CPU speed, SSD temperature and battery level. For an accurate CPU temperature the installer always sets up [PawnIO](https://pawnio.eu), a small free signed driver (without it Windows only gives a rough guess, shown with a `~`).
+
 It's free and open source (MIT license).
 
 
@@ -109,7 +111,7 @@ Look near the clock (you may need to click the **^** arrow). The snowflake icon 
 <details>
 <summary><b>Is it safe?</b></summary>
 
-Yes. Frostbyte only creates and switches a normal Windows *power plan*, the same thing you'd find under *Control Panel → Power Options*. It doesn't touch your hardware directly or install drivers. The only time it goes online is the optional update check (see Settings), which talks only to GitHub and sends nothing about you or your PC.
+Yes. Frostbyte only creates and switches a normal Windows *power plan*, the same thing you'd find under *Control Panel → Power Options*. The one extra thing the installer sets up is [PawnIO](https://pawnio.eu), a small free signed driver that lets Frostbyte read your real CPU temperature (read-only; Frostbyte never changes your hardware through it). The only time it goes online is the optional update check (see Settings), which talks only to GitHub and sends nothing about you or your PC.
 
 </details>
 
@@ -142,9 +144,9 @@ It uses standard Windows power settings, so it works on any Windows PC. How much
 </details>
 
 <details>
-<summary><b>Why isn't there a temperature display?</b></summary>
+<summary><b>Where does the temperature come from?</b></summary>
 
-Reading a CPU's true temperature reliably needs a special hardware driver. I decided to keep Frostbyte driver-free and simple, so it doesn't show temperatures.
+Reading a CPU's true temperature needs a small hardware driver, so the installer sets up [PawnIO](https://pawnio.eu) (free, signed, open source). Frostbyte uses it only to read the CPU's own thermal sensor, and shows that number in the window and when you hover the tray icon. Without PawnIO, Windows only offers a rough, often too-high guess, which Frostbyte marks with a `~`. The SSD temperature comes from the drive itself and the battery level from Windows. Intel graphics temperature isn't shown because Intel's driver doesn't expose it.
 
 </details>
 
