@@ -18,10 +18,10 @@
 
 <p align="center">
   <a href="https://github.com/scuba3198/Frostbyte/releases/latest"><b>⬇ Download</b></a> ·
-  <a href="#get-started-2-minutes">Get started</a> ·
+  <a href="#get-started">Get started</a> ·
   <a href="#settings">Settings</a> ·
   <a href="#questions">FAQ</a> ·
-  <a href="#how-it-works-for-the-curious">How it works</a>
+  <a href="#how-it-works">How it works</a>
 </p>
 
 Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn it on and your processor (CPU) stops pushing itself to its absolute maximum speed. That means less heat, a calmer fan, and often better battery life, at the cost of some peak performance. Turn it off and everything goes back exactly as it was.
@@ -32,20 +32,33 @@ Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn
 
 It's free and open source (MIT license).
 
+
 ---
 
-## Get started (2 minutes)
+<a id="get-started"></a>
+<details open>
+<summary><h2>Get started (2 minutes)</h2></summary>
 
-### 1. Download
+<details open>
+<summary><h3>1. Download</h3></summary>
+
 Go to the **[Releases page](https://github.com/scuba3198/Frostbyte/releases/latest)** and download **`Frostbyte-Setup-x.y.z.exe`**.
 
-### 2. Install
+</details>
+
+<details open>
+<summary><h3>2. Install</h3></summary>
+
 Double-click the file you downloaded and follow the steps (Next → Next → Install). On the options page you can choose whether to create a **Start Menu shortcut**, a **desktop shortcut**, and whether Frostbyte should **launch automatically when you sign in to Windows**. (You can change the last one later in Settings.)
 
 > **Windows says "Windows protected your PC"?**
 > That's normal for a new, small app that isn't digitally signed (code-signing certificates cost money). Click **More info**, then **Run anyway**. You can read all of the source code in this repository if you'd like to check what it does.
 
-### 3. Use it
+</details>
+
+<details open>
+<summary><h3>3. Use it</h3></summary>
+
 1. Open **Frostbyte** from the Start menu or desktop.
 2. Click the big switch so it says **ON** (the window turns blue). Click again to turn it **OFF** (the window turns orange).
 
@@ -53,9 +66,15 @@ That's it. You can leave it on all the time or just switch it on when your lapto
 
 Frostbyte asks for **administrator permission** when it opens. That's required because it changes a Windows power setting, and Windows only lets administrators do that.
 
+</details>
+
+</details>
+
 ---
 
-## Settings
+<a id="settings"></a>
+<details>
+<summary><h2>Settings</h2></summary>
 
 Click the **⚙ gear** in the top-right corner.
 
@@ -68,43 +87,85 @@ Click the **⚙ gear** in the top-right corner.
 | **Enable Cooling Mode on app launch** | Switches Cooling Mode on every time Frostbyte starts. Combine this with the two options above for "set and forget". |
 | **Close button minimizes to system tray** | Clicking **X** hides the window instead of quitting. Frostbyte keeps running in the tray. |
 
-### The tray icon
+<details>
+<summary><h3>The tray icon</h3></summary>
+
 Look near the clock (you may need to click the **^** arrow). The snowflake icon is **blue when Cooling Mode is on** and **orange when it's off**.
 - **Left-click** it to open the window.
 - **Right-click** it for a menu: open, switch Cooling Mode on/off, or **Exit** to quit completely.
 
+</details>
+
+</details>
+
 ---
 
-## Questions
+<a id="questions"></a>
+<details>
+<summary><h2>Questions</h2></summary>
 
-**Is it safe?**
+<details>
+<summary><b>Is it safe?</b></summary>
+
 Yes. Frostbyte only creates and switches a normal Windows *power plan*, the same thing you'd find under *Control Panel → Power Options*. It doesn't touch your hardware directly, install drivers, or connect to the internet.
 
-**Will it slow my PC down?**
+</details>
+
+<details>
+<summary><b>Will it slow my PC down?</b></summary>
+
 Only a little, and only when your CPU would otherwise be pushing to its very top speed (for example in games or heavy exports). Everyday use (browsing, documents, video) usually feels the same.
 
-**How do I turn it off completely?**
+</details>
+
+<details>
+<summary><b>How do I turn it off completely?</b></summary>
+
 Switch Cooling Mode to **OFF**, or just uninstall Frostbyte. Uninstalling automatically switches Cooling Mode off and removes the startup entry, so you're never left in a changed state.
 
-**Frostbyte says it needs to run as administrator.**
+</details>
+
+<details>
+<summary><b>Frostbyte says it needs to run as administrator.</b></summary>
+
 Accept the Windows prompt (UAC). It can't work without it.
 
-**Does it work on desktops and AMD CPUs?**
+</details>
+
+<details>
+<summary><b>Does it work on desktops and AMD CPUs?</b></summary>
+
 It uses standard Windows power settings, so it works on any Windows PC. How much cooler it gets depends on your CPU and how it handles the "boost" speeds. It was built and tested on an Intel laptop.
 
-**Why isn't there a temperature display?**
+</details>
+
+<details>
+<summary><b>Why isn't there a temperature display?</b></summary>
+
 Reading a CPU's true temperature reliably needs a special hardware driver. I decided to keep Frostbyte driver-free and simple, so it doesn't show temperatures.
 
-**Windows Security / antivirus flagged it.**
-Small unsigned apps sometimes get flagged by mistake. The full source is here and you can build it yourself (see below).
+</details>
+
+<details>
+<summary><b>Windows Security / antivirus flagged it.</b></summary>
+
+Small unsigned apps sometimes get flagged by mistake. The full source is here and you can build it yourself (see *How it works → Build it yourself* below).
+
+</details>
+
+</details>
 
 ---
 
-## How it works (for the curious)
+<a id="how-it-works"></a>
+<details>
+<summary><h2>How it works (for the curious)</h2></summary>
 
 Everything Frostbyte does comes down to **one Windows power plan** and a handful of settings in it.
 
-### What "Cooling Mode" actually changes
+<details>
+<summary><h3>What "Cooling Mode" actually changes</h3></summary>
+
 When you switch it **ON**, Frostbyte:
 
 1. **Remembers** which power plan is active right now.
@@ -121,13 +182,25 @@ When you switch it **ON**, Frostbyte:
 
 When you switch it **OFF**, it re-activates the plan from step 1 (Balanced if that's gone) and **deletes** the Frostbyte plan, leaving no trace.
 
-### Why 99%?
+</details>
+
+<details>
+<summary><h3>Why 99%?</h3></summary>
+
 Modern CPUs run at their normal "base" speed and then briefly **boost** well above it. Boosting is what makes them run hot and draw lots of power. Setting the maximum state to **99%** (just under 100%) is a widely used trick that stops Windows from engaging boost, and the boost-mode setting is also explicitly set to Disabled. The CPU still runs at full base speed, so it stays responsive, but it stops producing the short, hot bursts.
 
-### Where this came from
+</details>
+
+<details>
+<summary><h3>Where this came from</h3></summary>
+
 The behavior was worked out by observing a comparable commercial tool's actual effect on Windows power settings (using static and runtime analysis, for interoperability) and then **re-implementing it from scratch**. The five settings above are the ones that tool writes. No code, images or other assets from it are included in this project.
 
-### The pieces
+</details>
+
+<details>
+<summary><h3>The pieces</h3></summary>
+
 | File | Role |
 |---|---|
 | `CoolMode.cs` | The core: creates/activates/deletes the power plan using Windows' `powrprof.dll` API (`PowerDuplicateScheme`, `PowerWriteACValueIndex`, `PowerWriteDCValueIndex`, `PowerSetActiveScheme`, …). Also builds the command-line tool `CoolMode.exe`. |
@@ -137,14 +210,22 @@ The behavior was worked out by observing a comparable commercial tool's actual e
 | `installer.iss` | The [Inno Setup](https://jrsoftware.org/isinfo.php) script for the installer. |
 | `build.ps1` | Builds everything using only the compiler that ships with Windows. |
 
-### Details worth knowing
+</details>
+
+<details>
+<summary><h3>Details worth knowing</h3></summary>
+
 - **Why admin?** Writing to power plans requires administrator rights, so both programs carry a manifest asking for elevation.
 - **How "launch on startup" works:** a normal startup entry can't launch an admin app without a UAC prompt. Frostbyte instead registers a **Task Scheduler** task ("Frostbyte") that runs at sign-in with the highest privileges. It is configured to start even on battery power, which Task Scheduler blocks by default. Turning the option off or uninstalling deletes the task.
 - **One copy at a time:** launching Frostbyte again just brings the existing window to the front.
 - **Sharp on any screen:** the app declares itself DPI-aware and scales its own layout, so text isn't blurry on high-resolution or scaled displays.
 - **Where settings live:** `%AppData%\Frostbyte\settings.ini`, a few `key=1/0` lines you can edit or delete.
 
-### Command line
+</details>
+
+<details>
+<summary><h3>Command line</h3></summary>
+
 `CoolMode.exe` (installed next to Frostbyte) does the same thing without a window:
 
 ```
@@ -154,7 +235,11 @@ CoolMode.exe toggle    flip it
 CoolMode.exe status    prints ON/OFF (exit code 1 = on, 0 = off)
 ```
 
-### Build it yourself
+</details>
+
+<details>
+<summary><h3>Build it yourself</h3></summary>
+
 You only need Windows. No SDKs or package managers.
 
 ```powershell
@@ -169,7 +254,16 @@ ISCC.exe installer.iss
 
 The installer appears in `dist\`.
 
+</details>
+
+</details>
+
 ---
 
-## License
+<a id="license"></a>
+<details>
+<summary><h2>License</h2></summary>
+
 MIT. See [LICENSE](LICENSE). Contributions and issues are welcome.
+
+</details>
