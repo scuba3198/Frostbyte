@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1](https://github.com/scuba3198/Frostbyte/compare/v1.4.0...v1.4.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* GPU temperature, update checks, power-plan cleanup and drive reading ([#12](https://github.com/scuba3198/Frostbyte/issues/12)) ([1c1a105](https://github.com/scuba3198/Frostbyte/commit/1c1a1056ea9705a332c51b94d0a3eb40a2a20e72))
+* **site:** add an icon for every feature item ([#9](https://github.com/scuba3198/Frostbyte/issues/9)) ([356c955](https://github.com/scuba3198/Frostbyte/commit/356c955fe7a6eac362c02b6448ccd868a613d440))
+
 ## [1.4.0](https://github.com/scuba3198/Frostbyte/compare/v1.3.0...v1.4.0) (2026-11-13)
 
 
