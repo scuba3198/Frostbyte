@@ -17,6 +17,8 @@ static class Settings
     public static bool AutoUpdate = true;   // check GitHub for a newer release (at most once a day)
     public static long LastCheckTicks;      // UTC ticks of the last successful update check
 
+    static readonly object SaveLock = new object();
+
     public static void Load()
     {
         try
@@ -42,15 +44,16 @@ static class Settings
 
     public static void Save()
     {
-        try
-        {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllLines(FileName, new[] {
-                "Background="+ (Background ? 1 : 0), "CoolOnLaunch=" + (CoolOnLaunch ? 1 : 0),
-                "CloseToTray=" + (CloseToTray ? 1 : 0), "AutoUpdate=" + (AutoUpdate ? 1 : 0),
-                "LastCheck=" + LastCheckTicks });
-        }
-        catch { }
+        lock (SaveLock)   // called from the UI thread and from update-check worker threads
+            try
+            {
+                Directory.CreateDirectory(Dir);
+                File.WriteAllLines(FileName, new[] {
+                    "Background="+ (Background ? 1 : 0), "CoolOnLaunch=" + (CoolOnLaunch ? 1 : 0),
+                    "CloseToTray=" + (CloseToTray ? 1 : 0), "AutoUpdate=" + (AutoUpdate ? 1 : 0),
+                    "LastCheck=" + LastCheckTicks });
+            }
+            catch { }
     }
 }
 

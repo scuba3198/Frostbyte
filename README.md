@@ -30,7 +30,7 @@ Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn
 |---|---|
 | ![Frostbyte with Cooling Mode off](docs/window-off.png) | ![Frostbyte with Cooling Mode on](docs/window-on.png) |
 
-The main window also shows your live CPU temperature, CPU speed, SSD temperature and battery level. For an accurate CPU temperature the installer always sets up [PawnIO](https://pawnio.eu), a small free signed driver (without it Windows only gives a rough guess, shown with a `~`).
+The main window also shows your live CPU temperature, CPU speed, the temperature of the drive Windows is installed on (SSD or hard disk) and battery level. For an accurate CPU temperature the installer always sets up [PawnIO](https://pawnio.eu), a small free signed driver (without it Windows only gives a rough guess, shown with a `~`).
 
 It's free and open source (MIT license).
 
