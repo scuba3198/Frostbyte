@@ -80,7 +80,7 @@ class SensorReadings
 
 static class Sensors
 {
-    static PawnIo msr; static bool msrTried; static int tjMax = 100;
+    static PawnIo msr; static int msrWait; static int tjMax = 100;
     static PerformanceCounter perf; static double baseGhz = double.NaN;
     static string ssdName;
 
@@ -112,9 +112,10 @@ static class Sensors
 
     static double CpuTempMsr()
     {
-        if (!msrTried)
+        // open the driver on the first read; if it isn't there (yet), try again about once a minute
+        if (msr == null && --msrWait < 0)
         {
-            msrTried = true;
+            msrWait = 30;
             try
             {
                 msr = PawnIo.Open(LoadModule());
@@ -148,10 +149,12 @@ static class Sensors
         {
             if (perf == null)
             {
-                perf = new PerformanceCounter("Processor Information", "Processor Frequency", "_Total");
-                perf.NextValue();
+                // read the base speed first so a failure here never leaves a counter without a base speed
                 using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0"))
                     baseGhz = Convert.ToDouble(k.GetValue("~MHz")) / 1000.0;
+                var p = new PerformanceCounter("Processor Information", "Processor Frequency", "_Total");
+                try { p.NextValue(); } catch { p.Dispose(); throw; }
+                perf = p;
             }
             r.CpuGhz = perf.NextValue() / 1000.0; r.CpuMaxGhz = baseGhz;
         }
@@ -183,17 +186,17 @@ static class Gpu
 {
     [StructLayout(LayoutKind.Sequential)] struct Luid { public uint Low; public int High; }
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    struct AdapterInfo { public uint Handle; public Luid Luid; public uint NumSources; public int Software; }
+    struct AdapterInfo { public uint Handle; public Luid Luid; public uint NumSources; public int PrecisePresentRegionsPreferred; }
     [StructLayout(LayoutKind.Sequential)]
     struct EnumAdapters2 { public uint Num; public IntPtr Adapters; }
     [StructLayout(LayoutKind.Sequential)] struct CloseAdapter { public uint Handle; }
     [StructLayout(LayoutKind.Sequential)]
     struct QueryAdapterInfo { public uint Handle; public int Type; public IntPtr Data; public uint Size; }
     [StructLayout(LayoutKind.Sequential)]
-    struct PerfData
+    struct PerfData   // D3DKMT_ADAPTER_PERFDATA: 64 bytes; the driver rejects any other size
     {
         public uint PhysicalAdapterIndex; public ulong MemoryFrequency, MaxMemoryFrequency, MaxMemoryFrequencyOC,
-            MemoryBandwidth, PCIEBandwidth, FanRPM, Power, Temperature, PowerStateOverhead;
+            MemoryBandwidth, PCIEBandwidth; public uint FanRPM, Power, Temperature; public byte PowerStateOverride;
     }
     [DllImport("gdi32.dll")] static extern int D3DKMTEnumAdapters2(ref EnumAdapters2 e);
     [DllImport("gdi32.dll")] static extern int D3DKMTQueryAdapterInfo(ref QueryAdapterInfo q);
@@ -215,8 +218,7 @@ static class Gpu
                 for (int i = 0; i < e.Num; i++)
                 {
                     var ai = (AdapterInfo)Marshal.PtrToStructure(new IntPtr(e.Adapters.ToInt64() + i * sz), typeof(AdapterInfo));
-                    if (ai.Software == 0)
-                    {
+                    {   // adapters without a sensor (software renderers, many integrated GPUs) fail or report 0 and are ignored
                         var pd = new PerfData(); IntPtr p = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PerfData)));
                         try
                         {
@@ -241,36 +243,69 @@ static class Gpu
     }
 }
 
-// SSD temperature: the drive's own temperature property via IOCTL_STORAGE_QUERY_PROPERTY (works for NVMe and SATA).
+// Windows drive temperature: the drive's own temperature property via IOCTL_STORAGE_QUERY_PROPERTY (works for NVMe and SATA).
 static class Ssd
 {
-    const uint IoctlStorageQueryProperty = 0x2D1400;
-    const int StorageDeviceTemperatureProperty = 52, PropertyStandardQuery = 0;
+    const uint IoctlStorageQueryProperty = 0x2D1400, IoctlStorageGetDeviceNumber = 0x2D1080;
+    const int StorageDeviceSeekPenaltyProperty = 7, StorageDeviceTemperatureProperty = 52;
+    static int drive = -1; static string kind;
 
+    static SafeFileHandle Open(string path)
+    {
+        return Native.CreateFileW(path, 0, Native.SHARE_RW, IntPtr.Zero, Native.OPEN_EXISTING, 0, IntPtr.Zero);
+    }
+    static bool Query(SafeFileHandle h, int property, byte[] o, out int ret)
+    {
+        var q = new byte[12]; BitConverter.GetBytes(property).CopyTo(q, 0);   // STORAGE_PROPERTY_QUERY, PropertyStandardQuery
+        return Native.DeviceIoControl(h, IoctlStorageQueryProperty, q, q.Length, o, o.Length, out ret, IntPtr.Zero);
+    }
+
+    // Only the drive Windows is installed on is shown, so external or secondary drives never change the reading.
+    // Done once: which physical drive holds the Windows volume, and whether it is an SSD or a hard disk.
+    static void Locate()
+    {
+        drive = 0; kind = "DRIVE";
+        try
+        {
+            string vol = Path.GetPathRoot(Environment.SystemDirectory).TrimEnd('\\');   // "C:"
+            using (var v = Open(@"\\.\" + vol))
+            {
+                var o = new byte[12]; int ret;   // STORAGE_DEVICE_NUMBER: DeviceType, DeviceNumber, PartitionNumber
+                if (!v.IsInvalid && Native.DeviceIoControl(v, IoctlStorageGetDeviceNumber, null, 0, o, o.Length, out ret, IntPtr.Zero) && ret >= 8)
+                    drive = BitConverter.ToInt32(o, 4);
+            }
+        }
+        catch { }
+        try
+        {
+            using (var h = Open(@"\\.\PhysicalDrive" + drive))
+            {
+                var o = new byte[16]; int ret;   // DEVICE_SEEK_PENALTY_DESCRIPTOR: Version, Size, IncursSeekPenalty(u8)
+                if (!h.IsInvalid && Query(h, StorageDeviceSeekPenaltyProperty, o, out ret) && ret >= 9) kind = o[8] != 0 ? "HDD" : "SSD";
+            }
+        }
+        catch { }
+    }
+
+    // name: "SSD" or "HDD" ("DRIVE" if Windows can't tell)
     public static double Temperature(out string name)
     {
-        name = null;
-        double best = double.NaN;
-        for (int i = 0; i < 4; i++)
+        if (drive < 0) Locate();
+        name = kind;
+        try
         {
-            try
+            using (var h = Open(@"\\.\PhysicalDrive" + drive))
             {
-                using (var h = Native.CreateFileW(@"\\.\PhysicalDrive" + i, 0, Native.SHARE_RW, IntPtr.Zero, Native.OPEN_EXISTING, 0, IntPtr.Zero))
-                {
-                    if (h.IsInvalid) continue;
-                    var q = new byte[12]; BitConverter.GetBytes(StorageDeviceTemperatureProperty).CopyTo(q, 0); BitConverter.GetBytes(PropertyStandardQuery).CopyTo(q, 4);
-                    var o = new byte[512]; int ret;
-                    if (!Native.DeviceIoControl(h, IoctlStorageQueryProperty, q, q.Length, o, o.Length, out ret, IntPtr.Zero) || ret < 24) continue;
-                    // STORAGE_TEMPERATURE_DATA_DESCRIPTOR: Version, Size, CriticalTemp, WarningTemp, InfoCount(u16), Reserved, then per-info records
-                    int count = BitConverter.ToUInt16(o, 12);
-                    if (count < 1 || ret < 24 + 16) continue;
-                    short t = BitConverter.ToInt16(o, 24 + 2);   // STORAGE_TEMPERATURE_INFO: Index(u16), Temperature(i16), ...
-                    if (t > 0 && t < 150 && (double.IsNaN(best) || t > best)) best = t;
-                }
+                if (h.IsInvalid) return double.NaN;
+                var o = new byte[512]; int ret;
+                if (!Query(h, StorageDeviceTemperatureProperty, o, out ret) || ret < 24 + 16) return double.NaN;
+                // STORAGE_TEMPERATURE_DATA_DESCRIPTOR: Version, Size, CriticalTemp, WarningTemp, InfoCount(u16), Reserved, then per-info records
+                if (BitConverter.ToUInt16(o, 12) < 1) return double.NaN;
+                short t = BitConverter.ToInt16(o, 24 + 2);   // STORAGE_TEMPERATURE_INFO: Index(u16), Temperature(i16), ...
+                return t > 0 && t < 150 ? t : double.NaN;
             }
-            catch { }
         }
-        return best;
+        catch { return double.NaN; }
     }
 }
 

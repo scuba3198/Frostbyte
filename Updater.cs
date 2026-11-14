@@ -32,6 +32,8 @@ static class Updater
     public static string Format(Version v) { return v.Major + "." + v.Minor + "." + v.Build; }
     public static string CurrentText { get { return Format(Current); } }
     public static bool IsNewer(UpdateInfo i) { return i.Latest > Current; }
+    // A release is published a few minutes before CI attaches its installer; until then there is nothing to offer.
+    public static bool InstallerPending(UpdateInfo i) { return IsNewer(i) && i.AssetUrl == null; }
 
     static void Tls() { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; }   // TLS 1.2 (needed on .NET 4.x)
 
@@ -71,58 +73,70 @@ static class Updater
         return info;
     }
 
-    // Downloads the installer to %TEMP%, verifies GitHub's SHA-256 when it provides one, returns the path.
-    public static string Download(UpdateInfo i)
+    // Downloads the installer to %TEMP%, verifies it against the SHA-256 GitHub publishes, returns the path.
+    // "hold" keeps the verified file open (no write/delete sharing) so it cannot be swapped before it is started;
+    // the caller disposes it once the installer is running.
+    public static string Download(UpdateInfo i, out FileStream hold)
     {
+        hold = null;
         if (i.AssetUrl == null || !i.AssetUrl.StartsWith(DownloadPrefix, StringComparison.Ordinal))
             throw new Exception("This release has no installer that can be downloaded automatically.");
+        if (i.Sha256 == null)
+            throw new Exception("GitHub published no checksum for this installer, so it can't be verified.");
         Tls();
         string dir = Path.Combine(Path.GetTempPath(), "Frostbyte-Update"); Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, i.AssetName);
         using (var wc = new WebClient()) { wc.Headers[HttpRequestHeader.UserAgent] = "Frostbyte-UpdateCheck"; wc.DownloadFile(i.AssetUrl, path); }
-        if (i.Sha256 != null)
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        bool ok = false;
+        try
+        {
             using (var sha = SHA256.Create())
-            using (var fs = File.OpenRead(path))
-            {
-                string h = BitConverter.ToString(sha.ComputeHash(fs)).Replace("-", "");
-                if (!h.Equals(i.Sha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    fs.Close(); try { File.Delete(path); } catch { }
-                    throw new Exception("The downloaded file failed its integrity check, so it was discarded.");
-                }
-            }
-        return path;
+                ok = BitConverter.ToString(sha.ComputeHash(fs)).Replace("-", "").Equals(i.Sha256, StringComparison.OrdinalIgnoreCase);
+        }
+        finally { if (!ok) { fs.Dispose(); try { File.Delete(path); } catch { } } }
+        if (!ok) throw new Exception("The downloaded file failed its integrity check, so it was discarded.");
+        hold = fs; return path;
     }
 }
 
 static class UpdateFlow
 {
     // Ask -> download -> run the installer -> close Frostbyte (the installer replaces it). Call on the UI thread.
+    static bool active;   // UI thread only: a prompt is open or a download is running, so ignore further requests
+
     public static void Prompt(MainForm owner, UpdateInfo info)
     {
+        if (active) return;
+        active = true;
         IWin32Window w = owner.Visible ? (IWin32Window)owner : null;
         var r = MessageBox.Show(w,
             "Frostbyte " + Updater.Format(info.Latest) + " is available (you have " + Updater.CurrentText + ").\n\n" +
             "Download and install it now? Frostbyte will close while the installer runs.",
             "Frostbyte update", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-        if (r != DialogResult.Yes) return;
+        if (r != DialogResult.Yes) { active = false; return; }
         ThreadPool.QueueUserWorkItem(_ =>
         {
+            FileStream hold = null; string path = null, error = null;
+            try { path = Updater.Download(info, out hold); } catch (Exception ex) { error = ex.Message; }
             try
             {
-                string path = Updater.Download(info);
                 owner.BeginInvoke((Action)(() =>
                 {
-                    Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-                    owner.ExitApp();
+                    if (error == null)
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                            hold.Dispose(); owner.ExitApp(); return;
+                        }
+                        catch (Exception ex) { error = ex.Message; hold.Dispose(); }
+                    active = false;
+                    MessageBox.Show(owner.Visible ? (IWin32Window)owner : null,
+                        "The update could not be installed:\n" + error + "\n\nYou can get it manually from:\n" + info.PageUrl,
+                        "Frostbyte update", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }));
             }
-            catch (Exception ex)
-            {
-                owner.BeginInvoke((Action)(() => MessageBox.Show(owner.Visible ? (IWin32Window)owner : null,
-                    "The update could not be downloaded:\n" + ex.Message + "\n\nYou can get it manually from:\n" + info.PageUrl,
-                    "Frostbyte update", MessageBoxButtons.OK, MessageBoxIcon.Warning)));
-            }
+            catch { if (hold != null) hold.Dispose(); }   // the window is gone: the app is closing
         });
     }
 }

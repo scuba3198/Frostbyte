@@ -89,10 +89,13 @@ class FanIcon : Control
             for (int i = 0; i < 7; i++)
             {
                 var st = g.Save(); g.TranslateTransform(c, c); g.RotateTransform(i * 360f / 7);
-                var blade = new GraphicsPath();
-                blade.AddBezier(0, -3, 11, -8, 13, -18, 4, -21);
-                blade.AddBezier(4, -21, -3, -19, -6, -9, 0, -3);
-                g.FillPath(fill, blade); g.DrawPath(edge, blade); g.Restore(st);
+                using (var blade = new GraphicsPath())
+                {
+                    blade.AddBezier(0, -3, 11, -8, 13, -18, 4, -21);
+                    blade.AddBezier(4, -21, -3, -19, -6, -9, 0, -3);
+                    g.FillPath(fill, blade); g.DrawPath(edge, blade);
+                }
+                g.Restore(st);
             }
         using (var hub = new SolidBrush(Color.FromArgb(235, 170, 20))) g.FillEllipse(hub, c - 5, c - 5, 10, 10);
         using (var hub2 = new SolidBrush(Color.FromArgb(40, 120, 220))) g.FillEllipse(hub2, c - 2, c - 2, 4, 4);
@@ -324,7 +327,12 @@ class SettingsForm : Form
         ThreadPool.QueueUserWorkItem(_ =>
         {
             UpdateInfo info = null; string error = null;
-            try { info = Updater.Fetch(); Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save(); } catch (Exception ex) { error = ex.Message; }
+            try
+            {
+                info = Updater.Fetch();
+                if (!Updater.InstallerPending(info)) { Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save(); }
+            }
+            catch (Exception ex) { error = ex.Message; }
             try
             {
                 BeginInvoke((Action)(() =>
@@ -332,6 +340,7 @@ class SettingsForm : Form
                     btn.Enabled = true; btn.Text = "Check for updates";
                     var main = Owner as MainForm;
                     if (error != null) MessageBox.Show(this, "Couldn't check for updates. Check your internet connection and try again.\n\n" + error, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else if (Updater.InstallerPending(info)) MessageBox.Show(this, "Version " + Updater.Format(info.Latest) + " was just published and its installer is still being prepared. Try again in a few minutes.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     else if (Updater.IsNewer(info) && main != null) UpdateFlow.Prompt(main, info);
                     else if (Updater.IsNewer(info)) MessageBox.Show(this, "Version " + Updater.Format(info.Latest) + " is available:\n" + info.PageUrl, "Frostbyte");
                     else MessageBox.Show(this, "You're up to date. Frostbyte " + Updater.CurrentText + " is the latest version.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -376,6 +385,7 @@ class MainForm : Form
             try
             {
                 var info = Updater.Fetch();
+                if (Updater.InstallerPending(info)) return;   // release published, installer not attached yet: look again next hour
                 Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save();
                 if (!Updater.IsNewer(info)) return;
                 pendingUpdate = info;
@@ -441,13 +451,15 @@ class MainForm : Form
         tray.ContextMenuStrip = menu; tray.Visible = true;
         tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) ShowMain(); };
 
+        try { if (!CoolMode.IsOn()) CoolMode.RemoveLeftovers(); } catch { }
         if (Settings.CoolOnLaunch) { try { if (!CoolMode.IsOn()) CoolMode.Enable(); } catch { } }
         SyncState(true);
         poll.Interval = 2000; poll.Tick += (s, e) => { SyncState(false); PollSensors(); }; poll.Start();
         PollSensors();
         tray.BalloonTipClicked += (s, e) => { if (pendingUpdate != null) UpdateFlow.Prompt(this, pendingUpdate); };
         var upd = new System.Windows.Forms.Timer { Interval = 20000 };   // let the app settle before touching the network
-        upd.Tick += (s, e) => { upd.Stop(); AutoCheck(); }; upd.Start();
+        // then look hourly; AutoCheck itself only goes online when the last successful check is a day old
+        upd.Tick += (s, e) => { upd.Interval = 3600000; AutoCheck(); }; upd.Start();
 
         // a second launch asks this instance to show itself
         try
@@ -478,7 +490,7 @@ class MainForm : Form
         var rows = new System.Collections.Generic.List<string[]>();
         if (!double.IsNaN(r.CpuGhz)) rows.Add(new[] { "CPU SPEED", r.CpuGhz.ToString("0.00") + " / " + r.CpuMaxGhz.ToString("0.00"), "GHZ", "cpu" });
         if (!double.IsNaN(r.GpuTemp)) rows.Add(new[] { "GPU t°", Math.Round(r.GpuTemp).ToString("0"), "°C", "gpu" });
-        if (!double.IsNaN(r.SsdTemp)) rows.Add(new[] { "SSD t°", Math.Round(r.SsdTemp).ToString("0"), "°C", "ssd" });
+        if (!double.IsNaN(r.SsdTemp)) rows.Add(new[] { r.SsdName + " t°",Math.Round(r.SsdTemp).ToString("0"), "°C", "ssd" });
         if (r.Battery >= 0) rows.Add(new[] { "BATTERY", r.Battery.ToString(), "%", "battery" });
         if (list.SetRows(rows.ToArray())) DoLayout();
     }

@@ -54,6 +54,7 @@ static class CoolMode
     {
         Guid cur = Active();
         if (cur == SchemeGuid) { Console.WriteLine("Cool mode already ON."); return; }
+        RemoveLeftovers();   // a stale copy (plan switched away behind our back) would otherwise be reused as-is
 
         // Create scheme: duplicate Balanced into our fixed GUID (fallback: active scheme).
         Guid mine = SchemeGuid;
@@ -83,9 +84,17 @@ static class CoolMode
         Console.WriteLine("Cool mode ON  (scheme " + mine + ", previous " + cur + ")");
     }
 
+    // If something else switched the power plan while Cooling Mode was on, our scheme and the remembered
+    // previous plan are left behind. Only call while our scheme is NOT the active one.
+    internal static void RemoveLeftovers()
+    {
+        Guid mine = SchemeGuid; PowerDeleteScheme(IntPtr.Zero, ref mine);   // fails harmlessly if it doesn't exist
+        try { File.Delete(StateFile); } catch { }
+    }
+
     internal static void Disable()
     {
-        if (!IsOn()) { Console.WriteLine("Cool mode already OFF."); return; }
+        if (!IsOn()) { RemoveLeftovers(); Console.WriteLine("Cool mode already OFF."); return; }
         Guid prev = Balanced;
         try { if (File.Exists(StateFile)) prev = new Guid(File.ReadAllText(StateFile).Trim()); } catch { }
         if (prev == SchemeGuid) prev = Balanced;
