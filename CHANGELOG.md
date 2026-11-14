@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/scuba3198/Frostbyte/compare/v1.4.1...v1.4.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* smooth the big temperature text and keep it clear of the CPU name ([#13](https://github.com/scuba3198/Frostbyte/issues/13)) ([299a64e](https://github.com/scuba3198/Frostbyte/commit/299a64e869db70fe94050d91c8e6f682a114c923))
+
 ## [1.4.1](https://github.com/scuba3198/Frostbyte/compare/v1.4.0...v1.4.1) (2026-11-14)
 
 
