@@ -131,9 +131,33 @@ class Header : Panel
     public void SetTemp(double c, bool isApprox)
     {
         string s = double.IsNaN(c) ? "--" : Math.Round(c).ToString("0");
-        if (s != temp || approx != isApprox) { temp = s; approx = isApprox; Invalidate(); }
+        if (s != temp || approx != isApprox) { temp = s; approx = isApprox; Invalidate(); UpdateTextLeft(); }
     }
     public Header() { DoubleBuffered = true; }
+
+    // Left edge of the big temperature, so the form can keep the CPU name clear of it ("~48" and "100" are wider than "48").
+    public int TextLeft { get; private set; }
+    public event EventHandler TextLeftChanged;
+    Font BigFont() { return new Font("Segoe UI Light", 54f * (Width / 440f) * 0.75f); }
+    Font SmallFont() { return new Font("Segoe UI", 16f * (Width / 440f) * 0.75f); }
+    float NumLeft(Graphics g, Font big, Font small, out float numW)
+    {
+        float k = Width / 440f;
+        numW = g.MeasureString((approx ? "~" : "") + temp, big).Width - 14 * k;
+        return Width - 16 * k - g.MeasureString("°C", small).Width - numW;
+    }
+    void UpdateTextLeft()
+    {
+        if (Width <= 0 || !IsHandleCreated) return;
+        using (var g = CreateGraphics()) using (var big = BigFont()) using (var small = SmallFont())
+        {
+            g.TextRenderingHint = TextRenderingHint.AntiAlias;
+            float w; int l = (int)NumLeft(g, big, small, out w);
+            if (l != TextLeft) { TextLeft = l; if (TextLeftChanged != null) TextLeftChanged(this, EventArgs.Empty); }
+        }
+    }
+    protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); UpdateTextLeft(); }
+    protected override void OnResize(EventArgs e) { base.OnResize(e); UpdateTextLeft(); }
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -165,13 +189,13 @@ class Header : Panel
             }
         }
         // live CPU temperature, big, on the right
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        using (var big = new Font("Segoe UI Light", 54f * k * 0.75f))
-        using (var small = new Font("Segoe UI", 16f * k * 0.75f))
+        // grayscale anti-aliasing: ClearType leaves text this large with stair-stepped edges
+        g.TextRenderingHint = TextRenderingHint.AntiAlias;
+        using (var big = BigFont())
+        using (var small = SmallFont())
         {
             string num = (approx ? "~" : "") + temp;
-            float unitW = g.MeasureString("°C", small).Width, numW = g.MeasureString(num, big).Width - 14 * k;
-            float x = r.Width - 16 * k - unitW - numW, y = (r.Height - g.MeasureString(num, big).Height) / 2f;
+            float numW, x = NumLeft(g, big, small, out numW), y = (r.Height - g.MeasureString(num, big).Height) / 2f;
             g.DrawString(num, big, Brushes.White, x, y);
             g.DrawString("°C", small, Brushes.White, x + numW, y + g.MeasureString(num, big).Height - g.MeasureString("°C", small).Height * 2.1f);
         }
@@ -402,11 +426,18 @@ class MainForm : Form
         ClientSize = new Size(Dpi.S(440), Dpi.S(270) + (listH > 0 ? listH + Dpi.S(12) : 0));
         list.Location = new Point(0, Dpi.S(264)); list.Size = new Size(Dpi.S(440), listH);
         head.Height = Dpi.S(150);
-        cpu.Location = new Point(Dpi.S(18), Dpi.S(14)); name.Location = new Point(Dpi.S(18), Dpi.S(46)); name.Size = new Size(Dpi.S(240), Dpi.S(60));
+        cpu.Location = new Point(Dpi.S(18), Dpi.S(14)); name.Location = new Point(Dpi.S(18), Dpi.S(46)); FitName();
         gear.Size = new Size(Dpi.S(34), Dpi.S(34)); gear.Location = new Point(Dpi.S(440 - 44), Dpi.S(10));
         fan.Size = new Size(Dpi.S(52), Dpi.S(52)); fan.Location = new Point(Dpi.S(22), Dpi.S(188));
         title.Location = new Point(Dpi.S(86), Dpi.S(196));
         toggle.Size = new Size(Dpi.S(144), Dpi.S(56)); toggle.Location = new Point(Dpi.S(270), Dpi.S(186));
+    }
+    // the CPU name wraps onto a second line rather than run under the big temperature
+    void FitName()
+    {
+        int w = Dpi.S(240);
+        if (head.TextLeft > 0) w = Math.Max(Dpi.S(120), Math.Min(w, head.TextLeft - name.Left - Dpi.S(4)));
+        name.Size = new Size(w, Dpi.S(60));
     }
     protected override void SetVisibleCore(bool v) { if (!allowVisible) v = false; base.SetVisibleCore(v); }
     public void ShowMain()
@@ -434,6 +465,7 @@ class MainForm : Form
         title.AutoSize = true; title.BackColor = Color.Transparent;
         toggle.Toggled += (s, e) => DoToggle();
         toggle.PosChanged += (s, e) => head.T = toggle.Pos;
+        head.TextLeftChanged += (s, e) => FitName();
         gear.Click += (s, e) => { using (var f = new SettingsForm()) f.ShowDialog(this); };
         Controls.AddRange(new Control[] { fan, title, toggle, list });
         DoLayout();
