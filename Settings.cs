@@ -1,5 +1,6 @@
 // Persistent settings (%AppData%\Frostbyte\settings.ini) and the "start with Windows" scheduled task.
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Security;
@@ -16,6 +17,8 @@ static class Settings
     public static bool CloseToTray = true;  // close button hides to the tray
     public static bool AutoUpdate = true;   // check GitHub for a newer release (at most once a day)
     public static long LastCheckTicks;      // UTC ticks of the last successful update check
+    public static bool Autopilot;           // Cooling Mode off while chosen apps run, back on when they close
+    public static List<string> AutopilotApps = new List<string>();   // their paths (or bare "name.exe"), saved "|"-separated
 
     static readonly object SaveLock = new object();
 
@@ -36,6 +39,11 @@ static class Settings
                     case "CloseToTray": CloseToTray = b; break;
                     case "AutoUpdate": AutoUpdate = b; break;
                     case "LastCheck": long.TryParse(v, out LastCheckTicks); break;
+                    case "Autopilot": Autopilot = b; break;
+                    case "AutopilotApps":
+                        AutopilotApps.Clear();
+                        foreach (var a in v.Split('|')) if (a.Trim().Length > 0) AutopilotApps.Add(a.Trim());
+                        break;
                 }
             }
         }
@@ -51,7 +59,8 @@ static class Settings
                 File.WriteAllLines(FileName, new[] {
                     "Background="+ (Background ? 1 : 0), "CoolOnLaunch=" + (CoolOnLaunch ? 1 : 0),
                     "CloseToTray=" + (CloseToTray ? 1 : 0), "AutoUpdate=" + (AutoUpdate ? 1 : 0),
-                    "LastCheck=" + LastCheckTicks });
+                    "LastCheck=" + LastCheckTicks,
+                    "Autopilot=" + (Autopilot ? 1 : 0), "AutopilotApps=" + string.Join("|", AutopilotApps.ToArray()) });
             }
             catch { }
     }
