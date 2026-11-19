@@ -1,7 +1,9 @@
 // Frostbyte GUI - main window, settings dialog, tray icon.
 // Uses CoolMode.cs for the power-scheme logic, Settings.cs for persistence/startup, Logo.cs for the icon.
-// "--snap file.png [on|off]" and "--snap-settings file.png" capture the real window and exit (layout previews).
+// "--snap file.png [on|off]", "--snap-settings file.png" and "--snap-autopilot file.png" capture the real window and
+// exit (layout previews). Autopilot (the process watcher and its dialogs) lives in Autopilot.cs.
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -23,6 +25,49 @@ static class Theme
     }
     public static readonly Color Accent = Color.FromArgb(33, 150, 243);
     public static readonly Color Dark = Color.FromArgb(18, 18, 18);
+}
+
+// Dark menu bar and drop-downs to match the window.
+class DarkMenuRenderer : ToolStripProfessionalRenderer
+{
+    class Colors : ProfessionalColorTable
+    {
+        static readonly Color Bar = Theme.Dark, Drop = Color.FromArgb(32, 32, 34), Hot = Color.FromArgb(52, 52, 58), Edge = Color.FromArgb(62, 62, 68);
+        public override Color MenuStripGradientBegin { get { return Bar; } }
+        public override Color MenuStripGradientEnd { get { return Bar; } }
+        public override Color ToolStripDropDownBackground { get { return Drop; } }
+        public override Color ImageMarginGradientBegin { get { return Drop; } }
+        public override Color ImageMarginGradientMiddle { get { return Drop; } }
+        public override Color ImageMarginGradientEnd { get { return Drop; } }
+        public override Color MenuBorder { get { return Edge; } }
+        public override Color MenuItemBorder { get { return Hot; } }
+        public override Color MenuItemSelected { get { return Hot; } }
+        public override Color MenuItemSelectedGradientBegin { get { return Hot; } }
+        public override Color MenuItemSelectedGradientEnd { get { return Hot; } }
+        public override Color MenuItemPressedGradientBegin { get { return Drop; } }
+        public override Color MenuItemPressedGradientMiddle { get { return Drop; } }
+        public override Color MenuItemPressedGradientEnd { get { return Drop; } }
+        public override Color SeparatorDark { get { return Edge; } }
+        public override Color SeparatorLight { get { return Drop; } }
+        public override Color CheckBackground { get { return Drop; } }
+        public override Color CheckSelectedBackground { get { return Hot; } }
+        public override Color CheckPressedBackground { get { return Hot; } }
+        public override Color ButtonSelectedBorder { get { return Hot; } }
+    }
+    public DarkMenuRenderer() : base(new Colors()) { RoundedEdges = false; }
+    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+    {
+        e.TextColor = e.Item.Enabled ? Color.White : Color.Gray;
+        base.OnRenderItemText(e);
+    }
+    protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e) { e.ArrowColor = Color.Silver; base.OnRenderArrow(e); }
+    // a white tick instead of the stock dark one
+    protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+    {
+        var g = e.Graphics; var r = e.ImageRectangle; g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (var p = new Pen(Theme.Accent, Math.Max(2f, r.Width * 0.14f)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+            g.DrawLines(p, new[] { new PointF(r.X + r.Width * 0.18f, r.Y + r.Height * 0.52f), new PointF(r.X + r.Width * 0.42f, r.Y + r.Height * 0.76f), new PointF(r.X + r.Width * 0.84f, r.Y + r.Height * 0.26f) });
+    }
 }
 
 class Toggle : Control
@@ -341,13 +386,17 @@ class SettingsForm : Form
             Font = new Font("Segoe UI Semibold", 10.5f), Size = new Size(Dpi.S(170), Dpi.S(38)), Location = new Point(Dpi.S(440 - 24 - 170), Dpi.S(y))
         };
         btn.FlatAppearance.BorderSize = 0;
-        btn.Click += (s, e) => CheckNow(btn);
+        btn.Click += (s, e) =>
+        {
+            btn.Enabled = false; btn.Text = "Checking…";
+            CheckNow(this, Owner as MainForm, () => { btn.Enabled = true; btn.Text = "Check for updates"; });
+        };
         Controls.Add(ver); Controls.Add(btn);
     }
 
-    void CheckNow(Button btn)
+    // Manual update check (Settings button and Help menu); done runs on the UI thread before the result is shown.
+    public static void CheckNow(Form owner, MainForm main, Action done)
     {
-        btn.Enabled = false; btn.Text = "Checking…";
         ThreadPool.QueueUserWorkItem(_ =>
         {
             UpdateInfo info = null; string error = null;
@@ -359,15 +408,14 @@ class SettingsForm : Form
             catch (Exception ex) { error = ex.Message; }
             try
             {
-                BeginInvoke((Action)(() =>
+                owner.BeginInvoke((Action)(() =>
                 {
-                    btn.Enabled = true; btn.Text = "Check for updates";
-                    var main = Owner as MainForm;
-                    if (error != null) MessageBox.Show(this, "Couldn't check for updates. Check your internet connection and try again.\n\n" + error, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    else if (Updater.InstallerPending(info)) MessageBox.Show(this, "Version " + Updater.Format(info.Latest) + " was just published and its installer is still being prepared. Try again in a few minutes.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    if (done != null) done();
+                    if (error != null) MessageBox.Show(owner, "Couldn't check for updates. Check your internet connection and try again.\n\n" + error, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else if (Updater.InstallerPending(info)) MessageBox.Show(owner, "Version " + Updater.Format(info.Latest) + " was just published and its installer is still being prepared. Try again in a few minutes.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     else if (Updater.IsNewer(info) && main != null) UpdateFlow.Prompt(main, info);
-                    else if (Updater.IsNewer(info)) MessageBox.Show(this, "Version " + Updater.Format(info.Latest) + " is available:\n" + info.PageUrl, "Frostbyte");
-                    else MessageBox.Show(this, "You're up to date. Frostbyte " + Updater.CurrentText + " is the latest version.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else if (Updater.IsNewer(info)) MessageBox.Show(owner, "Version " + Updater.Format(info.Latest) + " is available:\n" + info.PageUrl, "Frostbyte");
+                    else MessageBox.Show(owner, "You're up to date. Frostbyte " + Updater.CurrentText + " is the latest version.", "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             }
             catch { }
@@ -393,8 +441,15 @@ class MainForm : Form
     readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer();
     readonly NotifyIcon tray = new NotifyIcon();
     readonly ToolStripMenuItem coolItem = new ToolStripMenuItem("Cooling Mode");
+    readonly ToolStripMenuItem apItem = new ToolStripMenuItem("Autopilot");
+    readonly AutopilotBar apBar = new AutopilotBar();
+    readonly ProcessWatch watch = new ProcessWatch();
+    bool? apWasRunning;                                   // null: Autopilot just started, not yet applied
+    bool apPausedCooling;                                 // Autopilot switched Cooling Mode off and owes switching it back on
+    HashSet<string> apRunning = new HashSet<string>();   // file names of watched apps running now
+    AutopilotForm apForm;
     Icon trayOn, trayOff;
-    bool allowVisible, exiting;
+    bool allowVisible, exiting, updateBalloon;
     UpdateInfo pendingUpdate;
 
     public void ExitApp() { exiting = true; Close(); }
@@ -413,8 +468,12 @@ class MainForm : Form
                 Settings.LastCheckTicks = DateTime.UtcNow.Ticks; Settings.Save();
                 if (!Updater.IsNewer(info)) return;
                 pendingUpdate = info;
-                BeginInvoke((Action)(() => tray.ShowBalloonTip(15000, "Frostbyte update available",
-                    "Version " + Updater.Format(info.Latest) + " is ready. Click here to install it.", ToolTipIcon.Info)));
+                BeginInvoke((Action)(() =>
+                {
+                    updateBalloon = true;
+                    tray.ShowBalloonTip(15000, "Frostbyte update available",
+                        "Version " + Updater.Format(info.Latest) + " is ready. Click here to install it.", ToolTipIcon.Info);
+                }));
             }
             catch { }   // offline etc.: try again next launch
         });
@@ -423,14 +482,80 @@ class MainForm : Form
     void DoLayout()
     {
         int listH = list.RowCount * SensorList.RowH;
-        ClientSize = new Size(Dpi.S(440), Dpi.S(270) + (listH > 0 ? listH + Dpi.S(12) : 0));
-        list.Location = new Point(0, Dpi.S(264)); list.Size = new Size(Dpi.S(440), listH);
-        head.Height = Dpi.S(150);
+        int m = menu.Height;   // everything sits below the menu bar
+        ClientSize = new Size(Dpi.S(440), m + Dpi.S(334) + (listH > 0 ? listH + Dpi.S(12) : 0));
+        menu.Width = ClientSize.Width;
+        apBar.Location = new Point(0, m + Dpi.S(260)); apBar.Size = new Size(Dpi.S(440), Dpi.S(66));
+        list.Location = new Point(0, m + Dpi.S(328)); list.Size = new Size(Dpi.S(440), listH);
+        head.Location = new Point(0, m); head.Size = new Size(Dpi.S(440), Dpi.S(150));
         cpu.Location = new Point(Dpi.S(18), Dpi.S(14)); name.Location = new Point(Dpi.S(18), Dpi.S(46)); FitName();
         gear.Size = new Size(Dpi.S(34), Dpi.S(34)); gear.Location = new Point(Dpi.S(440 - 44), Dpi.S(10));
-        fan.Size = new Size(Dpi.S(52), Dpi.S(52)); fan.Location = new Point(Dpi.S(22), Dpi.S(188));
-        title.Location = new Point(Dpi.S(86), Dpi.S(196));
-        toggle.Size = new Size(Dpi.S(144), Dpi.S(56)); toggle.Location = new Point(Dpi.S(270), Dpi.S(186));
+        fan.Size = new Size(Dpi.S(52), Dpi.S(52)); fan.Location = new Point(Dpi.S(22), m + Dpi.S(188));
+        title.Location = new Point(Dpi.S(86), m + Dpi.S(196));
+        toggle.Size = new Size(Dpi.S(144), Dpi.S(56)); toggle.Location = new Point(Dpi.S(270), m + Dpi.S(186));
+    }
+
+    // ---- menu bar: File, Cooling, Help
+    const string RepoUrl = "https://github.com/scuba3198/Frostbyte";
+    readonly MenuStrip menu = new MenuStrip();
+    readonly ToolStripMenuItem mCool = new ToolStripMenuItem("&Cooling Mode"), mAuto = new ToolStripMenuItem("&Autopilot");
+
+    void BuildMenu()
+    {
+        menu.Font = new Font("Segoe UI", 10f); menu.BackColor = Theme.Dark; menu.ForeColor = Color.White;
+        menu.Renderer = new DarkMenuRenderer(); menu.Padding = new Padding(Dpi.S(6), Dpi.S(2), 0, Dpi.S(2));
+        menu.Dock = DockStyle.None; menu.AutoSize = true; menu.Location = Point.Empty;
+
+        var file = new ToolStripMenuItem("&File");
+        file.DropDownItems.AddRange(new ToolStripItem[] {
+            Item("&Settings…", Keys.Control | Keys.Oemcomma, "Ctrl+,", (s, e) => OpenSettings()),
+            Item("Choose &Autopilot apps…", Keys.None, null, (s, e) => OpenAutopilot()),
+            new ToolStripSeparator(),
+            Item("&Hide to tray", Keys.Control | Keys.W, null, (s, e) => Hide()),
+            Item("E&xit", Keys.None, null, (s, e) => ExitApp()) });
+
+        mCool.ShortcutKeys = Keys.Control | Keys.M; mCool.Click += (s, e) => DoToggle();
+        mAuto.ShortcutKeys = Keys.Control | Keys.Shift | Keys.A; mAuto.Click += (s, e) => ToggleAutopilot();
+        var cool = new ToolStripMenuItem("&Cooling");
+        cool.DropDownItems.AddRange(new ToolStripItem[] { mCool, mAuto, new ToolStripSeparator(),
+            Item("Choose Autopilot apps…", Keys.None, null, (s, e) => OpenAutopilot()) });
+
+        var help = new ToolStripMenuItem("&Help");
+        help.DropDownItems.AddRange(new ToolStripItem[] {
+            Item("Frostbyte &help", Keys.F1, null, (s, e) => OpenUrl(RepoUrl + "#readme")),
+            Item("Check for &updates…", Keys.None, null, (s, e) => SettingsForm.CheckNow(this, this, null)),
+            Item("&Report a problem…", Keys.None, null, (s, e) => OpenUrl(RepoUrl + "/issues/new")),
+            new ToolStripSeparator(),
+            Item("&About Frostbyte", Keys.None, null, (s, e) => MessageBox.Show(this,
+                "Frostbyte " + Updater.CurrentText + "\n\nKeeps your PC cooler and quieter by stopping the CPU's short, hot boost bursts.\n\n" +
+                "© 2026 scuba3198 · MIT License\n" + RepoUrl.Replace("https://", ""), "About Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Information)) });
+
+        menu.Items.AddRange(new ToolStripItem[] { file, cool, help });
+        foreach (ToolStripMenuItem top in menu.Items)
+        {
+            top.ForeColor = Color.White;
+            top.DropDown.BackColor = Color.FromArgb(32, 32, 34);
+            foreach (ToolStripItem it in top.DropDownItems) it.ForeColor = Color.White;
+        }
+        MainMenuStrip = menu; Controls.Add(menu);
+        menu.Height = menu.GetPreferredSize(Size.Empty).Height;
+    }
+
+    static ToolStripMenuItem Item(string text, Keys keys, string keyText, EventHandler click)
+    {
+        var i = new ToolStripMenuItem(text); i.Click += click;
+        if (keys != Keys.None) i.ShortcutKeys = keys;
+        if (keyText != null) { i.ShortcutKeyDisplayString = keyText; i.ShowShortcutKeys = true; }
+        return i;
+    }
+
+    void OpenSettings() { ShowMain(); using (var f = new SettingsForm()) f.ShowDialog(this); }
+
+    // through Explorer, so the browser opens as you rather than with this app's administrator rights
+    void OpenUrl(string url)
+    {
+        try { System.Diagnostics.Process.Start("explorer.exe", "\"" + url + "\""); }
+        catch (Exception ex) { MessageBox.Show(this, "Couldn't open " + url + "\n\n" + ex.Message, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     }
     // the CPU name wraps onto a second line rather than run under the big temperature
     void FitName()
@@ -454,7 +579,7 @@ class MainForm : Form
         Font = new Font("Segoe UI", 10f); DoubleBuffered = true;
         try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { try { Icon = Logo.MakeIcon(32, true); } catch { } }
 
-        head.Dock = DockStyle.Top;
+        BuildMenu();
         cpu.Text = "CPU"; cpu.Font = new Font("Segoe UI Semibold", 14f, FontStyle.Bold);
         name.Text = CpuName(); name.Font = new Font("Segoe UI", 12.5f); name.AutoSize = false;
         foreach (var l in new[] { cpu, name }) { l.BackColor = Color.Transparent; l.ForeColor = Color.White; head.Controls.Add(l); }
@@ -466,11 +591,13 @@ class MainForm : Form
         toggle.Toggled += (s, e) => DoToggle();
         toggle.PosChanged += (s, e) => head.T = toggle.Pos;
         head.TextLeftChanged += (s, e) => FitName();
-        gear.Click += (s, e) => { using (var f = new SettingsForm()) f.ShowDialog(this); };
-        Controls.AddRange(new Control[] { fan, title, toggle, list });
+        gear.Click += (s, e) => OpenSettings();
+        apBar.SwitchClicked += (s, e) => ToggleAutopilot();
+        apBar.OpenClicked += (s, e) => OpenAutopilot();
+        Controls.AddRange(new Control[] { fan, title, toggle, apBar, list });
         DoLayout();
 
-        if (snap) { toggle.SetImmediate(snapOn); try { ShowSensors(Sensors.Read()); } catch { } return; }
+        if (snap) { toggle.SetImmediate(snapOn); UpdateApBar(); try { ShowSensors(Sensors.Read()); } catch { } return; }
 
         // tray icon (blue = cooling on, orange = off)
         Size si = SystemInformation.SmallIconSize;
@@ -478,17 +605,19 @@ class MainForm : Form
         var menu = new ContextMenuStrip();
         var open = new ToolStripMenuItem("Open Frostbyte"); open.Font = new Font(open.Font, FontStyle.Bold); open.Click += (s, e) => ShowMain();
         coolItem.Click += (s, e) => DoToggle();
+        apItem.Click += (s, e) => ToggleAutopilot();
         var exit = new ToolStripMenuItem("Exit"); exit.Click += (s, e) => { exiting = true; Close(); };
-        menu.Items.AddRange(new ToolStripItem[] { open, coolItem, new ToolStripSeparator(), exit });
+        menu.Items.AddRange(new ToolStripItem[] { open, coolItem, apItem, new ToolStripSeparator(), exit });
         tray.ContextMenuStrip = menu; tray.Visible = true;
         tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) ShowMain(); };
 
         try { if (!CoolMode.IsOn()) CoolMode.RemoveLeftovers(); } catch { }
         if (Settings.CoolOnLaunch) { try { if (!CoolMode.IsOn()) CoolMode.Enable(); } catch { } }
         SyncState(true);
-        poll.Interval = 2000; poll.Tick += (s, e) => { SyncState(false); PollSensors(); }; poll.Start();
+        AutopilotTick();
+        poll.Interval = 2000; poll.Tick += (s, e) => { AutopilotTick(); SyncState(false); PollSensors(); }; poll.Start();
         PollSensors();
-        tray.BalloonTipClicked += (s, e) => { if (pendingUpdate != null) UpdateFlow.Prompt(this, pendingUpdate); };
+        tray.BalloonTipClicked += (s, e) => { if (updateBalloon && pendingUpdate != null) UpdateFlow.Prompt(this, pendingUpdate); else ShowMain(); };
         var upd = new System.Windows.Forms.Timer { Interval = 20000 };   // let the app settle before touching the network
         // then look hourly; AutoCheck itself only goes online when the last successful check is a day old
         upd.Tick += (s, e) => { upd.Interval = 3600000; AutoCheck(); }; upd.Start();
@@ -531,9 +660,9 @@ class MainForm : Form
     {
         bool on = false; try { on = CoolMode.IsOn(); } catch { }
         if (immediate) toggle.SetImmediate(on); else toggle.On = on;
-        coolItem.Checked = on;
+        coolItem.Checked = on; mCool.Checked = on;
         if (trayOn != null) tray.Icon = on ? trayOn : trayOff;
-        coolOn = on; UpdateTrayText();
+        coolOn = on; UpdateTrayText(); UpdateApBar();
     }
     bool coolOn; string cpuTempText = "";
     // hover tooltip: "Frostbyte – CPU 51°C – Cooling Mode ON" (NotifyIcon.Text is limited to 63 characters)
@@ -547,9 +676,109 @@ class MainForm : Form
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Frostbyte", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     }
 
+    // ---- Autopilot: if Cooling Mode is on when a watched app (or anything it started) runs, it is switched off, and
+    // switched back on once they've all closed. If it was already off, Autopilot leaves it off. It only acts when that
+    // changes, so switching Cooling Mode by hand in between is kept until the next change.
+    void AutopilotTick()
+    {
+        var map = ApApps.WatchMap();
+        if (!Settings.Autopilot || map.Count == 0)
+        {
+            // Autopilot turned off (or its last app removed) while it had Cooling Mode paused: give it back
+            if (apPausedCooling)
+            {
+                apPausedCooling = false;
+                try { if (!CoolMode.IsOn()) { CoolMode.Enable(); ApBalloon("Cooling Mode switched back on", Settings.Autopilot ? "No apps are being watched any more." : "Autopilot was turned off."); } } catch { }
+                SyncState(false);
+            }
+            apWasRunning = null; watch.Reset(); apRunning = new HashSet<string>(); UpdateApBar(); return;
+        }
+        HashSet<string> now;
+        try { now = watch.Scan(map); } catch { return; }
+        apRunning = now;
+        bool busy = now.Count > 0;
+        if (apWasRunning != busy)
+        {
+            apWasRunning = busy;
+            try
+            {
+                bool on = CoolMode.IsOn();
+                if (busy && on)
+                {
+                    CoolMode.Disable(); apPausedCooling = true;
+                    ApBalloon("Cooling Mode switched off", AppNames(now, map) + (now.Count > 1 ? " are" : " is") +
+                        " running. Cooling Mode will switch back on when " + (now.Count > 1 ? "they close." : "it closes."));
+                }
+                else if (!busy && apPausedCooling)
+                {
+                    apPausedCooling = false;   // only undo what Autopilot itself did
+                    if (!on) { CoolMode.Enable(); ApBalloon("Cooling Mode switched back on", "Your Autopilot apps have closed."); }
+                }
+            }
+            catch { }
+            SyncState(false);
+        }
+        UpdateApBar();
+    }
+
+    void ApBalloon(string title, string text)
+    {
+        if (!tray.Visible) return;
+        updateBalloon = false;
+        tray.ShowBalloonTip(5000, "Autopilot: " + title, text, ToolTipIcon.None);
+    }
+
+    static string AppNames(HashSet<string> keys, Dictionary<string, string> map)
+    {
+        var n = new List<string>();
+        foreach (var k in keys) { string l; n.Add(map.TryGetValue(k, out l) ? l : k); }
+        n.Sort(StringComparer.CurrentCultureIgnoreCase);
+        if (n.Count == 1) return n[0];
+        if (n.Count == 2) return n[0] + " and " + n[1];
+        return n[0] + ", " + n[1] + " and " + (n.Count - 2) + " more";
+    }
+
+    void UpdateApBar()
+    {
+        int n = Settings.AutopilotApps.Count;
+        string apps = n == 1 ? "1 app" : n + " apps", text;
+        bool busy = Settings.Autopilot && apRunning.Count > 0;
+        if (!Settings.Autopilot) text = n == 0 ? "Off · choose apps that need full speed" : "Off · " + apps + " chosen";
+        else if (n == 0) text = "On · click here to choose apps";
+        else if (busy) text = AppNames(apRunning, ApApps.WatchMap()) + " running · " + (coolOn ? "Cooling Mode kept on" : apPausedCooling ? "Cooling Mode paused" : "Cooling Mode off");
+        else text = "Watching " + apps;
+        apBar.SetState(Settings.Autopilot, busy, text);
+        apItem.Checked = Settings.Autopilot; mAuto.Checked = Settings.Autopilot;
+    }
+
+    void ToggleAutopilot()
+    {
+        Settings.Autopilot = !Settings.Autopilot; Settings.Save();
+        AutopilotTick();
+        if (apForm != null) apForm.ReloadSwitch();
+    }
+
+    void OpenAutopilot()
+    {
+        if (apForm != null) { apForm.Activate(); return; }
+        ShowMain();
+        try
+        {
+            apForm = new AutopilotForm(() => apRunning);
+            apForm.Changed += (s, e) => AutopilotTick();
+            apForm.ShowDialog(this);
+        }
+        finally { if (apForm != null) apForm.Dispose(); apForm = null; }
+        AutopilotTick();
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         if (!exiting && Settings.CloseToTray && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); return; }
+        // Quitting Frostbyte switches back to your normal power plan, so Cooling Mode never lingers with the app gone.
+        // When Windows itself is shutting down or signing out the plan is left as it is, so it carries over a restart.
+        if (trayOn != null && e.CloseReason != CloseReason.WindowsShutDown && e.CloseReason != CloseReason.TaskManagerClosing)
+            try { poll.Stop(); if (CoolMode.IsOn()) CoolMode.Disable(); } catch { }
         tray.Visible = false; base.OnFormClosing(e);
     }
     protected override void Dispose(bool d) { if (d) tray.Dispose(); base.Dispose(d); }
@@ -587,6 +816,10 @@ static class CoolModeGui
         if (a.Length >= 2 && a[0] == "--snap-settings")
         {
             var f = new SettingsForm(); f.StartPosition = FormStartPosition.CenterScreen; Snap(f, a[1]); return;
+        }
+        if (a.Length >= 2 && a[0] == "--snap-autopilot")
+        {
+            var f = new AutopilotForm(() => new HashSet<string>()); f.StartPosition = FormStartPosition.CenterScreen; Snap(f, a[1]); return;
         }
 
         if (a.Length >= 2 && a[0] == "--startup")   // scripting hook: Frostbyte.exe --startup on|off

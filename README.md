@@ -78,7 +78,9 @@ Frostbyte asks for **administrator permission** when it opens. That's required b
 <details>
 <summary><h2>Settings</h2></summary>
 
-Click the **⚙ gear** in the top-right corner.
+Click the **⚙ gear** in the top-right corner (or **File → Settings…**, Ctrl+,).
+
+The menu bar at the top also has **Cooling** (switch Cooling Mode with Ctrl+M or Autopilot with Ctrl+Shift+A, and choose Autopilot's apps) and **Help** (this guide with F1, check for updates, report a problem, about).
 
 ![Frostbyte settings](docs/settings.png)
 
@@ -92,11 +94,30 @@ Click the **⚙ gear** in the top-right corner.
 | **Check for updates** (button) | Checks right now. If there's a new version it offers to download and install it (the download is verified against the checksum GitHub publishes for it). |
 
 <details>
+<summary><h3>Autopilot</h3></summary>
+
+Autopilot switches Cooling Mode **off while the apps you choose are open**, so games or heavy apps get full speed, and **back on as soon as they've all closed**. If Cooling Mode was already off when they opened, Autopilot leaves it off.
+
+![Choosing apps for Autopilot](docs/autopilot.png)
+
+1. Click the **Autopilot** row under the Cooling Mode switch.
+2. Click **Add a running app** and tick the apps you want (open them first so they show up), or **Browse for a program…** to pick its `.exe` or shortcut.
+3. That's it. The row shows what's happening, for example *"Game running · Cooling Mode paused"*, and a tray notification tells you each time Autopilot switches.
+
+- **Anything an app starts counts too.** If you pick a launcher, the game it starts is watched as well, even after the launcher closes.
+- **Changed your mind?** If you turn Autopilot off, or remove the app it's waiting on, while it has Cooling Mode paused, Cooling Mode switches straight back on.
+- **Your own clicks win.** If you flip Cooling Mode by hand while a watched app is open, Autopilot leaves it alone until the next app opens or the last one closes.
+- Use the small switch on the row (or **Autopilot** in the tray menu) to pause or resume Autopilot without losing your list.
+- Apps are recognised by their program file name (for example `game.exe`), wherever they're installed.
+
+</details>
+
+<details>
 <summary><h3>The tray icon</h3></summary>
 
 Look near the clock (you may need to click the **^** arrow). The snowflake icon is **blue when Cooling Mode is on** and **orange when it's off**.
 - **Left-click** it to open the window.
-- **Right-click** it for a menu: open, switch Cooling Mode on/off, or **Exit** to quit completely.
+- **Right-click** it for a menu: open, switch Cooling Mode on/off, pause or resume Autopilot, or **Exit** to quit completely. Quitting switches Cooling Mode off and puts your normal power plan back (when Windows shuts down or restarts, Cooling Mode is left as it was).
 
 </details>
 
@@ -125,7 +146,7 @@ Only a little, and only when your CPU would otherwise be pushing to its very top
 <details>
 <summary><b>How do I turn it off completely?</b></summary>
 
-Switch Cooling Mode to **OFF**, or just uninstall Frostbyte. Uninstalling automatically switches Cooling Mode off and removes the startup entry, so you're never left in a changed state.
+Switch Cooling Mode to **OFF**, quit Frostbyte (right-click the tray icon → **Exit**), or just uninstall Frostbyte. Uninstalling automatically switches Cooling Mode off and removes the startup entry, so you're never left in a changed state.
 
 </details>
 
@@ -209,6 +230,7 @@ Cooling Mode only uses documented Windows power settings, so you can verify exac
 |---|---|
 | `CoolMode.cs` | The core: creates/activates/deletes the power plan using Windows' `powrprof.dll` API (`PowerDuplicateScheme`, `PowerWriteACValueIndex`, `PowerWriteDCValueIndex`, `PowerSetActiveScheme`, …). Also builds the command-line tool `CoolMode.exe`. |
 | `CoolModeGui.cs` | The window, settings dialog and tray icon (Windows Forms, all custom-drawn). |
+| `Autopilot.cs` | Autopilot: watches the chosen apps and every process they start (a Windows process snapshot every 2 seconds, following parent → child links and checking start times so a recycled process id is never mistaken for a child), plus its dialog and the running-app picker. |
 | `Settings.cs` | Saves your choices to `%AppData%\Frostbyte\settings.ini` and manages the startup task. |
 | `Updater.cs` | The update check (GitHub releases API) and the download + checksum + launch-installer flow. |
 | `Logo.cs`, `tools/IconGen.cs` | The logo is drawn in code; the icon generator turns it into `Frostbyte.ico`. |
@@ -224,7 +246,7 @@ Cooling Mode only uses documented Windows power settings, so you can verify exac
 - **How "launch on startup" works:** a normal startup entry can't launch an admin app without a UAC prompt. Frostbyte instead registers a **Task Scheduler** task ("Frostbyte") that runs at sign-in with the highest privileges. It is configured to start even on battery power, which Task Scheduler blocks by default. Turning the option off or uninstalling deletes the task.
 - **One copy at a time:** launching Frostbyte again just brings the existing window to the front.
 - **Sharp on any screen:** the app declares itself DPI-aware and scales its own layout, so text isn't blurry on high-resolution or scaled displays.
-- **Where settings live:** `%AppData%\Frostbyte\settings.ini`, a few `key=1/0` lines you can edit or delete.
+- **Where settings live:** `%AppData%\Frostbyte\settings.ini`, a few `key=value` lines you can edit or delete (Autopilot's apps are on the `AutopilotApps=` line, separated by `|`).
 
 </details>
 

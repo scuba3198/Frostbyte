@@ -41,7 +41,7 @@ Compile /target:exe /main:CoolMode /win32manifest:"$here\CoolMode.manifest" /out
 # 3) GUI
 Compile /target:winexe /main:CoolModeGui @sys /r:System.Web.Extensions.dll @res `
     /win32icon:"$here\Frostbyte.ico" /win32manifest:"$here\CoolMode.manifest" /out:"$here\Frostbyte.exe" `
-    "$here\CoolMode.cs" "$here\CoolModeGui.cs" "$here\Sensors.cs" "$here\Settings.cs" "$here\Updater.cs" "$here\Logo.cs" "$here\AssemblyInfo.g.cs"
+    "$here\CoolMode.cs" "$here\CoolModeGui.cs" "$here\Autopilot.cs" "$here\Sensors.cs" "$here\Settings.cs" "$here\Updater.cs" "$here\Logo.cs" "$here\AssemblyInfo.g.cs"
 
 Write-Host "Built Frostbyte $Version"
 
