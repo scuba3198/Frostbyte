@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/scuba3198/Frostbyte/compare/v1.4.2...v1.5.0) (2026-11-19)
+
+
+### Features
+
+* Autopilot pauses Cooling Mode while chosen apps run, plus a menu bar ([#15](https://github.com/scuba3198/Frostbyte/issues/15)) ([465e1e8](https://github.com/scuba3198/Frostbyte/commit/465e1e8212484127a2b53d2d7b3110fa2eb0d4e5))
+
 ## [1.4.2](https://github.com/scuba3198/Frostbyte/compare/v1.4.1...v1.4.2) (2026-11-14)
 
 
