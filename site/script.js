@@ -47,8 +47,47 @@
   });
   skip.addEventListener('click', close);
   video.addEventListener('ended', close);
-  video.addEventListener('timeupdate', function () {
-    if (video.duration) bar.style.width = (100 * video.currentTime / video.duration) + '%';
+  // Progress bar doubles as a seek bar: click or drag (mouse/touch), or arrow keys / Home / End when focused.
+  var seek = document.getElementById('intro-seek');
+  var dragging = false;
+  function showTime(t) {
+    if (!video.duration) return;
+    bar.style.width = (100 * t / video.duration) + '%';
+    seek.setAttribute('aria-valuemax', String(Math.round(video.duration)));
+    seek.setAttribute('aria-valuenow', String(Math.round(t)));
+    seek.setAttribute('aria-valuetext', Math.round(t) + ' seconds');
+  }
+  function seekTo(t) {
+    if (!video.duration) return;
+    t = Math.max(0, Math.min(video.duration - 0.05, t));
+    video.currentTime = t;
+    showTime(t);
+  }
+  function seekToPointer(e) {
+    var r = seek.getBoundingClientRect();
+    seekTo(video.duration * (e.clientX - r.left) / r.width);
+  }
+  video.addEventListener('timeupdate', function () { if (!dragging) showTime(video.currentTime); });
+  seek.addEventListener('pointerdown', function (e) {
+    dragging = true;
+    seek.classList.add('dragging');
+    seek.setPointerCapture(e.pointerId);
+    seekToPointer(e);
+  });
+  seek.addEventListener('pointermove', function (e) { if (dragging) seekToPointer(e); });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    seek.classList.remove('dragging');
+    if (video.paused && !video.ended) video.play();
+  }
+  seek.addEventListener('pointerup', endDrag);
+  seek.addEventListener('pointercancel', endDrag);
+  seek.addEventListener('keydown', function (e) {
+    var step = { ArrowLeft: -2, ArrowDown: -2, ArrowRight: 2, ArrowUp: 2 }[e.key];
+    if (step) { e.preventDefault(); seekTo(video.currentTime + step); }
+    else if (e.key === 'Home') { e.preventDefault(); seekTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); seekTo(video.duration); }
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && root.classList.contains('intro-on')) close();
