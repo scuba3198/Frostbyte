@@ -24,6 +24,11 @@
   <a href="#how-it-works">How it works</a>
 </p>
 
+<p align="center">
+  <a href="https://scuba3198.github.io/Frostbyte/assets/launch.mp4"><img src="docs/launch-film.jpg" width="720" alt="Watch the 20-second Frostbyte launch film"></a><br>
+  <sub>▶ Watch the 20-second launch film</sub>
+</p>
+
 Frostbyte is a tiny Windows app with a single big switch: **Cooling Mode**. Turn it on and your processor (CPU) stops pushing itself to its absolute maximum speed. That means less heat, a calmer fan, and often better battery life, at the cost of some peak performance. Turn it off and everything goes back exactly as it was.
 
 | Cooling Mode OFF | Cooling Mode ON |

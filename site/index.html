@@ -11,8 +11,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@100..900&display=swap" rel="stylesheet">
 <link href="style.css" rel="stylesheet">
 <link href="extra.css" rel="stylesheet">
+<script>
+// Show the launch-film intro before first paint, unless the visitor prefers reduced motion.
+if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('intro-on');
+</script>
 </head>
 <body>
+<div id="intro" class="intro" role="dialog" aria-label="Frostbyte launch film" aria-modal="true">
+  <video id="intro-video" muted playsinline preload="auto" poster="assets/launch-poster.jpg"></video>
+  <div class="intro-bar">
+    <button type="button" id="intro-sound" class="intro-sound" aria-pressed="false" aria-label="Turn sound on">
+      <svg class="i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6" fill="none"/></svg>
+      <svg class="i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
+      <span>Sound</span>
+    </button>
+    <button type="button" id="intro-skip" class="intro-skip">Skip intro</button>
+  </div>
+  <div class="intro-progress"><i id="intro-progress"></i></div>
+</div>
 <section class="container"><article class="main">
 
 <div class="section-wrapper sw-header"><div class="section s-header">
@@ -35,6 +51,7 @@
     <a href="https://github.com/scuba3198/Frostbyte/releases/latest" class="download-btn">Download</a>
     <a href="https://github.com/scuba3198/Frostbyte" target="_blank" rel="noopener" class="download-btn gh alt">Source on GitHub</a>
   </div>
+  <button type="button" id="replay-film" class="replay-film"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>Watch the 20-second film</button>
   <div class="s1-footer"><span>Compatible with: Windows 11, 10</span><span>Size: <b data-release-size>2.1MB</b></span><span>Current version: <b data-release-version>1.3.0</b></span></div>
 </div></div></div>
 
