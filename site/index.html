@@ -27,7 +27,7 @@ if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matche
     </button>
     <button type="button" id="intro-skip" class="intro-skip">Skip intro</button>
   </div>
-  <div class="intro-progress"><i id="intro-progress"></i></div>
+  <div class="intro-progress" id="intro-seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0" aria-valuetext="0 seconds"><div class="intro-track"><i id="intro-progress"></i></div></div>
 </div>
 <section class="container"><article class="main">
 
