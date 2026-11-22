@@ -34,3 +34,27 @@ pre.code i{color:#9393A1}
  .h-logo{font-size:22px}
 }
 b[data-release-version],b[data-release-size]{font-weight:inherit}
+
+/* Launch-film intro: full-screen on load, muted by default, sound toggle + skip */
+.intro{display:none;position:fixed;inset:0;z-index:1000;background:#101014;opacity:1;transition:opacity .7s ease,visibility 0s linear .7s;visibility:visible}
+html.intro-on .intro{display:block}
+html.intro-on body{overflow:hidden}
+.intro.leaving{opacity:0;visibility:hidden}
+.intro video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#101014}
+.intro-bar{position:absolute;left:0;right:0;bottom:28px;display:flex;justify-content:center;align-items:center;gap:12px;padding:0 16px}
+.intro-bar button{font:inherit;cursor:pointer;color:#fff;background:rgba(16,16,20,.55);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:9px 18px;font-size:14px;line-height:20px;letter-spacing:.01em;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s,border-color .2s}
+.intro-bar button:hover{background:rgba(63,124,239,.35);border-color:rgba(221,243,255,.5)}
+.intro-bar button:focus-visible{outline:2px solid #17BBEE;outline-offset:3px}
+.intro-sound{display:inline-flex;align-items:center;gap:8px}
+.intro-sound svg{width:18px;height:18px;fill:#fff;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.intro-sound .i-on{display:none}
+.intro-sound[aria-pressed="true"] .i-on{display:block}
+.intro-sound[aria-pressed="true"] .i-off{display:none}
+.intro-sound[aria-pressed="true"]{border-color:#17BBEE}
+.intro-progress{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.08)}
+.intro-progress i{display:block;height:100%;width:0;background:linear-gradient(101deg,#3F7CEF,#17BBEE)}
+.replay-film{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:0;background:none;border:0;cursor:pointer;font:inherit;font-size:16px;color:#DDF3FF;opacity:.85}
+.replay-film:hover{opacity:1;text-decoration:underline}
+.replay-film svg{width:22px;height:22px;padding:5px;border-radius:50%;background:linear-gradient(101deg,#3F7CEF,#17BBEE);fill:#fff;box-sizing:border-box}
+@media (max-width:1200px){.replay-film{display:flex;margin:18px auto 0}}
+@media (prefers-reduced-motion:reduce){.intro{transition:none}}
